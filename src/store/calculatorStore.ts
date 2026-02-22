@@ -5,6 +5,7 @@ import {
   StorageClass,
   AWSRegion,
 } from "@/types";
+import { calculate } from "@/lib/calculator";
 
 interface CalculatorState {
   inputs: CalculatorInputs;
@@ -13,7 +14,6 @@ interface CalculatorState {
     key: K,
     value: CalculatorInputs[K]
   ) => void;
-  setOutput: (output: CalculatorOutput) => void;
   resetInputs: () => void;
 }
 
@@ -30,13 +30,21 @@ const defaultInputs: CalculatorInputs = {
   glacierRetrievalTier: "standard",
 };
 
+function computeOutput(inputs: CalculatorInputs): CalculatorOutput | null {
+  if (inputs.storageGB <= 0 || inputs.objectCount <= 0) return null;
+  return calculate(inputs);
+}
+
 export const useCalculatorStore = create<CalculatorState>((set) => ({
   inputs: defaultInputs,
   output: null,
   setInput: (key, value) =>
-    set((state) => ({
-      inputs: { ...state.inputs, [key]: value },
-    })),
-  setOutput: (output) => set({ output }),
+    set((state) => {
+      const newInputs = { ...state.inputs, [key]: value };
+      return {
+        inputs: newInputs,
+        output: computeOutput(newInputs),
+      };
+    }),
   resetInputs: () => set({ inputs: defaultInputs, output: null }),
 }));
