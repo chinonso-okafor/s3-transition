@@ -4,12 +4,7 @@ import { useMemo } from "react";
 import { CalculatorOutput } from "@/types";
 import { STORAGE_CLASS_LABELS } from "@/lib/pricing";
 import { formatCurrency } from "@/lib/utils";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
   LineChart,
@@ -18,7 +13,6 @@ import {
   YAxis,
   CartesianGrid,
   Tooltip as RechartsTooltip,
-  Legend,
   ResponsiveContainer,
   ReferenceDot,
 } from "recharts";
@@ -37,7 +31,8 @@ export function BreakevenChart({ output }: BreakevenChartProps) {
   const currentMonthlyTotal = currentResult?.monthlyCost.total ?? 0;
   const recommendedMonthlyTotal = recommendation?.monthlyCost.total ?? 0;
   const transitionCost =
-    (recommendation?.transitionCost ?? 0) + (recommendation?.minDurationPenalty ?? 0);
+    (recommendation?.transitionCost ?? 0) +
+    (recommendation?.minDurationPenalty ?? 0);
 
   const chartData = useMemo(() => {
     const data = [];
@@ -51,12 +46,17 @@ export function BreakevenChart({ output }: BreakevenChartProps) {
     return data;
   }, [currentMonthlyTotal, recommendedMonthlyTotal, transitionCost]);
 
-  if (!recommendation || !currentResult || recommendation.monthlySavings <= 0) {
+  if (
+    !recommendation ||
+    !currentResult ||
+    recommendation.monthlySavings <= 0
+  ) {
     return null;
   }
 
   const currentLabel = STORAGE_CLASS_LABELS[inputs.currentClass];
-  const recommendedLabel = STORAGE_CLASS_LABELS[recommendation.storageClass];
+  const recommendedLabel =
+    STORAGE_CLASS_LABELS[recommendation.storageClass];
 
   const crossoverMonth = recommendation.breakEvenMonths;
   const crossoverValue =
@@ -66,40 +66,54 @@ export function BreakevenChart({ output }: BreakevenChartProps) {
 
   return (
     <Card>
-      <CardHeader className="pb-3">
-        <CardTitle className="text-lg">Break-Even Analysis</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent className="p-6">
+        <h2 className="text-xl font-semibold text-foreground mb-4">
+          Break-Even Analysis
+        </h2>
         <div className="h-[300px] w-full">
           <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={chartData} margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
-              <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
+            <LineChart
+              data={chartData}
+              margin={{ top: 5, right: 20, left: 10, bottom: 5 }}
+            >
+              <CartesianGrid stroke="#f3f4f6" strokeDasharray="" />
               <XAxis
                 dataKey="month"
-                label={{ value: "Months", position: "insideBottom", offset: -5 }}
+                label={{
+                  value: "Months",
+                  position: "insideBottom",
+                  offset: -5,
+                  style: { fontSize: 12, fill: "#6b7280" },
+                }}
+                tick={{ fontSize: 12, fill: "#6b7280" }}
                 tickFormatter={(v: number) => `${v}`}
               />
               <YAxis
                 tickFormatter={(v: number) =>
-                  v >= 1000 ? `$${(v / 1000).toFixed(0)}k` : `$${v.toFixed(0)}`
+                  v >= 1000
+                    ? `$${(v / 1000).toFixed(0)}k`
+                    : `$${v.toFixed(0)}`
                 }
+                tick={{ fontSize: 12, fill: "#6b7280" }}
                 width={60}
               />
               <RechartsTooltip
+                contentStyle={{
+                  backgroundColor: "#ffffff",
+                  border: "1px solid #e5e7eb",
+                  borderRadius: "8px",
+                  fontSize: "12px",
+                  boxShadow: "0 1px 3px rgba(0,0,0,0.08)",
+                }}
                 formatter={(value) => [
                   formatCurrency(Number(value)),
                 ]}
                 labelFormatter={(label) => `Month ${label}`}
               />
-              <Legend
-                formatter={(value: string) =>
-                  value === "current" ? currentLabel : recommendedLabel
-                }
-              />
               <Line
                 type="monotone"
                 dataKey="current"
-                stroke="#6b7280"
+                stroke="#9ca3af"
                 strokeWidth={2}
                 dot={false}
                 name="current"
@@ -107,34 +121,47 @@ export function BreakevenChart({ output }: BreakevenChartProps) {
               <Line
                 type="monotone"
                 dataKey="recommended"
-                stroke="#16a34a"
+                stroke="#2563eb"
                 strokeWidth={2}
                 dot={false}
                 name="recommended"
               />
-              {crossoverMonth !== null && crossoverValue !== null && crossoverMonth <= 24 && (
-                <ReferenceDot
-                  x={Math.round(crossoverMonth)}
-                  y={crossoverValue}
-                  r={6}
-                  fill="#2563eb"
-                  stroke="#fff"
-                  strokeWidth={2}
-                />
-              )}
+              {crossoverMonth !== null &&
+                crossoverValue !== null &&
+                crossoverMonth <= 24 && (
+                  <ReferenceDot
+                    x={Math.round(crossoverMonth)}
+                    y={crossoverValue}
+                    r={6}
+                    fill="#2563eb"
+                    stroke="#fff"
+                    strokeWidth={2}
+                  />
+                )}
             </LineChart>
           </ResponsiveContainer>
         </div>
 
-        <div className="flex flex-wrap gap-4 text-sm">
+        <div className="flex items-center gap-4 mt-4 text-sm">
+          <div className="flex items-center gap-1.5">
+            <span className="inline-block h-0.5 w-4 bg-[#9ca3af]" />
+            <span className="text-[#6b7280]">{currentLabel}</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <span className="inline-block h-0.5 w-4 bg-[#2563eb]" />
+            <span className="text-[#6b7280]">{recommendedLabel}</span>
+          </div>
+        </div>
+
+        <div className="flex flex-wrap gap-4 mt-4 text-sm">
           {recommendation.breakEvenMonths !== null && (
             <div className="flex items-center gap-2">
-              <span className="text-muted-foreground">Pays back in</span>
-              <Badge variant="outline" className="font-semibold">
+              <span className="text-[#6b7280]">Pays back in</span>
+              <Badge variant="outline" className="font-semibold tabular-nums">
                 {recommendation.breakEvenMonths.toFixed(1)} months
               </Badge>
               {recommendation.breakEvenDate && (
-                <span className="text-muted-foreground">
+                <span className="text-[#6b7280]">
                   ({recommendation.breakEvenDate})
                 </span>
               )}
@@ -142,13 +169,13 @@ export function BreakevenChart({ output }: BreakevenChartProps) {
           )}
           {recommendation.roi12Month !== null && (
             <div className="flex items-center gap-2">
-              <span className="text-muted-foreground">12-month ROI:</span>
+              <span className="text-[#6b7280]">12-month ROI:</span>
               <Badge
                 variant="outline"
                 className={
                   recommendation.roi12Month > 0
-                    ? "text-green-700 border-green-300 font-semibold"
-                    : "text-red-700 border-red-300 font-semibold"
+                    ? "text-[#16a34a] border-green-300 font-semibold tabular-nums"
+                    : "text-[#dc2626] border-red-300 font-semibold tabular-nums"
                 }
               >
                 {recommendation.roi12Month.toFixed(0)}%

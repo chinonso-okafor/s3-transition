@@ -3,13 +3,7 @@
 import { CalculatorOutput } from "@/types";
 import { STORAGE_CLASS_LABELS } from "@/lib/pricing";
 import { formatCurrency } from "@/lib/utils";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-} from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 
 interface SensitivityTableProps {
   output: CalculatorOutput;
@@ -22,62 +16,86 @@ export function SensitivityTable({ output }: SensitivityTableProps) {
 
   return (
     <Card>
-      <CardHeader className="pb-3">
-        <CardTitle className="text-lg">Sensitivity Analysis</CardTitle>
-        <CardDescription>
+      <CardContent className="p-6">
+        <h2 className="text-xl font-semibold text-foreground mb-1">
+          Sensitivity Analysis
+        </h2>
+        <p className="text-sm text-[#6b7280] mb-4">
           How sensitive is this recommendation to changes in access frequency?
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        <table className="w-full text-sm" role="table">
-          <thead>
-            <tr className="border-b text-left text-muted-foreground">
-              <th className="pb-2 pr-3 font-medium">Scenario</th>
-              <th className="pb-2 px-3 font-medium">Recommended Class</th>
-              <th className="pb-2 px-3 font-medium text-right">Monthly TCO</th>
-              <th className="pb-2 pl-3 font-medium text-right">vs Current</th>
-            </tr>
-          </thead>
-          <tbody>
-            {sensitivityAnalysis.map((scenario) => {
-              const isSameAsCurrentRecommendation =
-                output.recommendation?.storageClass === scenario.recommendedClass;
-              const isCurrentClass = scenario.recommendedClass === inputs.currentClass;
+        </p>
+        <div className="overflow-x-auto -mx-6 px-6">
+          <table className="w-full text-sm" role="table">
+            <thead>
+              <tr className="border-b border-border bg-[#f9fafb]">
+                <th className="py-3 pr-3 text-left text-xs font-semibold uppercase tracking-wider text-[#6b7280]">
+                  Scenario
+                </th>
+                <th className="py-3 px-3 text-left text-xs font-semibold uppercase tracking-wider text-[#6b7280]">
+                  Recommended Class
+                </th>
+                <th className="py-3 px-3 text-left text-xs font-semibold uppercase tracking-wider text-[#6b7280]">
+                  Monthly TCO
+                </th>
+                <th className="py-3 pl-3 text-left text-xs font-semibold uppercase tracking-wider text-[#6b7280]">
+                  vs Current
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {sensitivityAnalysis.map((scenario, index) => {
+                const isSameAsCurrentRecommendation =
+                  output.recommendation?.storageClass ===
+                  scenario.recommendedClass;
+                const isCurrentClass =
+                  scenario.recommendedClass === inputs.currentClass;
+                const isEven = index % 2 === 0;
 
-              return (
-                <tr key={scenario.label} className="border-b last:border-0">
-                  <td className="py-2.5 pr-3 font-medium">
-                    {scenario.label}
-                  </td>
-                  <td className="py-2.5 px-3">
-                    <span className={isSameAsCurrentRecommendation ? "text-green-700 font-medium" : ""}>
-                      {STORAGE_CLASS_LABELS[scenario.recommendedClass]}
-                    </span>
-                    {isCurrentClass && (
-                      <span className="text-muted-foreground text-xs ml-1">(stay)</span>
-                    )}
-                  </td>
-                  <td className="py-2.5 px-3 text-right tabular-nums">
-                    {formatCurrency(scenario.monthlyTCO)}
-                  </td>
-                  <td className="py-2.5 pl-3 text-right tabular-nums">
-                    {scenario.monthlySavings > 0 ? (
-                      <span className="text-green-600">
-                        -{formatCurrency(scenario.monthlySavings)}
+                return (
+                  <tr
+                    key={scenario.label}
+                    className={`border-b border-border last:border-0 h-12 ${isEven ? "bg-white" : "bg-[#f9fafb]"}`}
+                  >
+                    <td className="py-3 pr-3 font-medium">
+                      {scenario.label}
+                    </td>
+                    <td className="py-3 px-3">
+                      <span
+                        className={
+                          isSameAsCurrentRecommendation
+                            ? "text-[#2563eb] font-medium"
+                            : ""
+                        }
+                      >
+                        {STORAGE_CLASS_LABELS[scenario.recommendedClass]}
                       </span>
-                    ) : scenario.monthlySavings < 0 ? (
-                      <span className="text-red-600">
-                        +{formatCurrency(Math.abs(scenario.monthlySavings))}
-                      </span>
-                    ) : (
-                      <span className="text-muted-foreground">—</span>
-                    )}
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
+                      {isCurrentClass && (
+                        <span className="text-[#6b7280] text-xs ml-1">
+                          (stay)
+                        </span>
+                      )}
+                    </td>
+                    <td className="py-3 px-3 tabular-nums">
+                      {formatCurrency(scenario.monthlyTCO)}
+                    </td>
+                    <td className="py-3 pl-3 tabular-nums">
+                      {scenario.monthlySavings > 0 ? (
+                        <span className="text-[#16a34a]">
+                          -{formatCurrency(scenario.monthlySavings)}
+                        </span>
+                      ) : scenario.monthlySavings < 0 ? (
+                        <span className="text-[#dc2626]">
+                          +{formatCurrency(Math.abs(scenario.monthlySavings))}
+                        </span>
+                      ) : (
+                        <span className="text-[#6b7280]">{"\u2014"}</span>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
       </CardContent>
     </Card>
   );

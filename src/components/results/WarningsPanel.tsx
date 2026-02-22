@@ -3,12 +3,6 @@
 import { useState } from "react";
 import { CalculatorOutput } from "@/types";
 import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
@@ -26,46 +20,49 @@ export function WarningsPanel({ output }: WarningsPanelProps) {
   const resultWarnings = output.results.flatMap((r) =>
     r.isRecommended ? r.warnings : []
   );
-  const combinedWarnings = Array.from(new Set([...allWarnings, ...resultWarnings]));
+  const combinedWarnings = Array.from(
+    new Set([...allWarnings, ...resultWarnings])
+  );
 
   if (combinedWarnings.length === 0) return null;
 
   return (
-    <Card className="border-amber-200">
+    <div className="rounded-lg bg-[#fffbeb] border border-[#fde68a] border-l-4 border-l-[#d97706]">
       <Collapsible open={isOpen} onOpenChange={setIsOpen}>
-        <CardHeader className="pb-3">
-          <CollapsibleTrigger className="flex w-full items-center justify-between">
-            <div className="flex items-center gap-2">
-              <CardTitle className="text-lg">Warnings & Caveats</CardTitle>
-              <Badge
-                variant="outline"
-                className="bg-amber-50 text-amber-800 border-amber-300"
-              >
-                {combinedWarnings.length}
-              </Badge>
-            </div>
-            <svg
-              className={`h-4 w-4 text-muted-foreground transition-transform ${isOpen ? "rotate-180" : ""}`}
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-              strokeWidth={2}
-              aria-hidden="true"
-            >
-              <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-            </svg>
-          </CollapsibleTrigger>
-        </CardHeader>
+        <CollapsibleTrigger className="flex w-full items-center justify-between px-6 py-4">
+          <div className="flex items-center gap-2">
+            <h2 className="text-base font-semibold text-foreground">
+              Warnings & Caveats
+            </h2>
+            <Badge className="bg-amber-100 text-amber-800 border-0">
+              {combinedWarnings.length}
+            </Badge>
+          </div>
+          <svg
+            className={`h-4 w-4 text-[#6b7280] transition-transform duration-200 ${isOpen ? "rotate-180" : ""}`}
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+            strokeWidth={2}
+            aria-hidden="true"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M19 9l-7 7-7-7"
+            />
+          </svg>
+        </CollapsibleTrigger>
         <CollapsibleContent>
-          <CardContent className="pt-0">
+          <div className="px-6 pb-4">
             <ul className="space-y-2" role="list">
               {combinedWarnings.map((warning, i) => (
                 <li
                   key={i}
-                  className="flex gap-2 rounded-lg border border-amber-100 bg-amber-50/50 px-3 py-2 text-sm text-amber-900"
+                  className="flex gap-2 text-sm text-[#92400e]"
                 >
                   <svg
-                    className="mt-0.5 h-4 w-4 shrink-0 text-amber-500"
+                    className="mt-0.5 h-4 w-4 shrink-0 text-[#d97706]"
                     fill="none"
                     viewBox="0 0 24 24"
                     stroke="currentColor"
@@ -82,9 +79,9 @@ export function WarningsPanel({ output }: WarningsPanelProps) {
                 </li>
               ))}
             </ul>
-          </CardContent>
+          </div>
         </CollapsibleContent>
       </Collapsible>
-    </Card>
+    </div>
   );
 }

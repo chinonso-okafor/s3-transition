@@ -5,19 +5,12 @@ import { STORAGE_CLASS_LABELS } from "@/lib/pricing";
 import { useCalculatorStore } from "@/store/calculatorStore";
 import { formatCurrency } from "@/lib/utils";
 import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Badge } from "@/components/ui/badge";
 import { RegionSelect } from "@/components/inputs/RegionSelect";
 import { StorageInput } from "@/components/inputs/StorageInput";
 import { ObjectCountInput } from "@/components/inputs/ObjectCountInput";
@@ -44,99 +37,101 @@ export function InputPanel() {
   const showGlacierOptions = output !== null;
 
   return (
-    <div className="w-full lg:w-[400px] lg:shrink-0 space-y-4">
-      {/* Section 1: Workload Profile */}
-      <Card>
-        <CardHeader className="pb-4">
-          <CardTitle className="text-base">Workload Profile</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <RegionSelect />
-          <StorageInput />
-          <ObjectCountInput />
-        </CardContent>
-      </Card>
-
-      {/* Section 2: Access Patterns */}
-      <Card>
-        <CardHeader className="pb-4">
-          <CardTitle className="text-base">Access Patterns</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <AccessPatternInputs />
-          <ConfidenceSelector />
-        </CardContent>
-      </Card>
-
-      {/* Section 3: Current Setup */}
-      <Card>
-        <CardHeader className="pb-4">
-          <CardTitle className="text-base">Current Setup</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <label
-              htmlFor="current-class"
-              className="text-sm font-medium leading-none"
-            >
-              Current Storage Class
-            </label>
-            <Select
-              value={currentClass}
-              onValueChange={(value) =>
-                setInput("currentClass", value as StorageClass)
-              }
-            >
-              <SelectTrigger
-                id="current-class"
-                aria-label="Current storage class"
-              >
-                <SelectValue placeholder="Select current class" />
-              </SelectTrigger>
-              <SelectContent>
-                {SELECTABLE_CLASSES.map((sc) => (
-                  <SelectItem key={sc} value={sc}>
-                    {STORAGE_CLASS_LABELS[sc]}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+    <aside className="w-full lg:w-[400px] lg:shrink-0 bg-white border-b lg:border-b-0 lg:border-r border-border lg:overflow-y-auto">
+      <div className="divide-y divide-border">
+        {/* Section 1: Workload Profile */}
+        <section className="px-6 py-5">
+          <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-4">
+            Workload Profile
+          </h3>
+          <div className="space-y-4">
+            <RegionSelect />
+            <StorageInput />
+            <ObjectCountInput />
           </div>
-          {currentMonthlyCost !== null && (
-            <div className="flex items-center justify-between rounded-lg border bg-muted/50 px-4 py-3">
-              <span className="text-sm text-muted-foreground">
-                Current estimated monthly cost
-              </span>
-              <Badge variant="outline" className="text-base font-semibold">
-                {formatCurrency(currentMonthlyCost)}
-              </Badge>
+        </section>
+
+        {/* Section 2: Access Patterns */}
+        <section className="px-6 py-5">
+          <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-4">
+            Access Patterns
+          </h3>
+          <div className="space-y-4">
+            <AccessPatternInputs />
+            <ConfidenceSelector />
+          </div>
+        </section>
+
+        {/* Section 3: Current Setup */}
+        <section className="px-6 py-5">
+          <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-4">
+            Current Setup
+          </h3>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <label
+                htmlFor="current-class"
+                className="text-sm font-medium leading-none text-foreground"
+              >
+                Current Storage Class
+              </label>
+              <Select
+                value={currentClass}
+                onValueChange={(value) =>
+                  setInput("currentClass", value as StorageClass)
+                }
+              >
+                <SelectTrigger
+                  id="current-class"
+                  aria-label="Current storage class"
+                >
+                  <SelectValue placeholder="Select current class" />
+                </SelectTrigger>
+                <SelectContent>
+                  {SELECTABLE_CLASSES.map((sc) => (
+                    <SelectItem key={sc} value={sc}>
+                      {STORAGE_CLASS_LABELS[sc]}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
-          )}
-        </CardContent>
-      </Card>
+            {currentMonthlyCost !== null && (
+              <div className="flex items-center justify-between rounded-lg border border-border bg-muted px-4 py-3">
+                <span className="text-sm text-muted-foreground">
+                  Current estimated monthly cost
+                </span>
+                <span className="text-sm font-semibold tabular-nums text-foreground">
+                  {formatCurrency(currentMonthlyCost)}
+                </span>
+              </div>
+            )}
+          </div>
+        </section>
 
-      {/* Section 4: Retention & Behavior */}
-      <Card>
-        <CardHeader className="pb-4">
-          <CardTitle className="text-base">Retention & Behavior</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <RetentionInput />
-          <MutableToggle />
-        </CardContent>
-      </Card>
+        {/* Section 4: Retention & Behavior */}
+        <section className="px-6 py-5">
+          <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-4">
+            Retention & Behavior
+          </h3>
+          <div className="space-y-4">
+            <RetentionInput />
+            <MutableToggle />
+          </div>
+        </section>
 
-      {/* Section 5: Glacier Options (conditional) */}
-      {showGlacierOptions && (
-        <Card>
-          <CardHeader className="pb-4">
-            <CardTitle className="text-base">Glacier Options</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <GlacierTierSelect />
-          </CardContent>
-        </Card>
-      )}
-    </div>
+        {/* Section 5: Glacier Options (conditional) */}
+        {showGlacierOptions && (
+          <section className="px-6 py-5">
+            <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-4">
+              Glacier Options
+            </h3>
+            <div className="space-y-4">
+              <GlacierTierSelect />
+            </div>
+          </section>
+        )}
+      </div>
+    </aside>
   );
 }
