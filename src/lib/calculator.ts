@@ -107,9 +107,48 @@ function getBilledStorageGB(
 function calcITBlendedStorageRate(
   accessPatternConfidence: AccessPatternConfidence,
   monthlyGetRequests: number,
-  storageGB: number
+  storageGB: number,
+  itArchiveTiersEnabled: boolean
 ): number {
   const rates = INTELLIGENT_TIERING_STORAGE_RATES;
+
+  if (itArchiveTiersEnabled) {
+    let freqPct: number;
+    let infreqPct: number;
+    let archiveInstantPct: number;
+    let archiveAccessPct: number;
+    let deepArchiveAccessPct: number;
+
+    if (accessPatternConfidence === "low") {
+      freqPct = 0.6;
+      infreqPct = 0.25;
+      archiveInstantPct = 0.1;
+      archiveAccessPct = 0.03;
+      deepArchiveAccessPct = 0.02;
+    } else if (accessPatternConfidence === "medium") {
+      freqPct = 0.5;
+      infreqPct = 0.3;
+      archiveInstantPct = 0.12;
+      archiveAccessPct = 0.05;
+      deepArchiveAccessPct = 0.03;
+    } else {
+      freqPct = 0.4;
+      infreqPct = 0.3;
+      archiveInstantPct = 0.15;
+      archiveAccessPct = 0.1;
+      deepArchiveAccessPct = 0.05;
+    }
+
+    return (
+      freqPct * rates.frequent +
+      infreqPct * rates.infrequent +
+      archiveInstantPct * rates.archiveInstant +
+      archiveAccessPct * rates.archiveAccess +
+      deepArchiveAccessPct * rates.deepArchiveAccess
+    );
+  }
+
+  // Standard 3-tier distribution (archive tiers disabled)
   let freqPct: number;
   let infreqPct: number;
   let archivePct: number;
@@ -176,7 +215,8 @@ export function calcMonthlyTCO(
     storageRate = calcITBlendedStorageRate(
       inputs.accessPatternConfidence,
       inputs.monthlyGetRequests,
-      inputs.storageGB
+      inputs.storageGB,
+      inputs.itArchiveTiersEnabled
     );
   } else {
     billedGB = getBilledStorageGB(
@@ -214,13 +254,19 @@ export function calcMonthlyTCO(
     monitoringCost = (eligible / 1000) * pricing.monitoringPer1KObjects;
   }
 
+  // EOZ has an additional per-GB upload fee
+  let uploadCost = 0;
+  if (storageClass === StorageClass.EXPRESS_ONE_ZONE) {
+    uploadCost = inputs.storageGB * EOZ_PRICING.uploadPerGB;
+  }
+
   const total =
-    (storageCost + requestCost + retrievalCost + monitoringCost) *
+    (storageCost + requestCost + retrievalCost + monitoringCost + uploadCost) *
     regionalMultiplier;
 
   return {
     storage: storageCost * regionalMultiplier,
-    requests: requestCost * regionalMultiplier,
+    requests: (requestCost + uploadCost) * regionalMultiplier,
     retrieval: retrievalCost * regionalMultiplier,
     monitoring: monitoringCost * regionalMultiplier,
     total,
@@ -319,7 +365,10 @@ export function calcEOZResult(
   inputs: CalculatorInputs,
   currentMonthlyTCO: number
 ): EOZResult | null {
-  if (inputs.currentClass !== StorageClass.STANDARD) return null;
+  // Suppress EOZ card when user is already on EOZ or not on Standard
+  if (
+    inputs.currentClass !== StorageClass.STANDARD
+  ) return null;
 
   const eligible = isEOZEligible(inputs.region);
   if (!eligible) {
@@ -462,6 +511,7 @@ function calcSensitivity(
 // --- Candidate classes ---
 
 function getCandidateClasses(currentClass: StorageClass): StorageClass[] {
+  // Standard cost-optimization classes (never include EOZ in ranked list)
   return [
     StorageClass.STANDARD,
     StorageClass.INTELLIGENT_TIERING,
@@ -604,6 +654,11 @@ export function calculate(inputs: CalculatorInputs): CalculatorOutput {
   if (!eozEligible && inputs.currentClass === StorageClass.STANDARD) {
     globalWarnings.push(
       `S3 Express One Zone is not available in ${inputs.region}.`
+    );
+  }
+  if (inputs.itArchiveTiersEnabled) {
+    globalWarnings.push(
+      "Archive Access tiers require asynchronous retrieval (hours). Ensure your application can tolerate this before enabling."
     );
   }
 

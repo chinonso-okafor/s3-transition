@@ -1,12 +1,14 @@
 "use client";
 
 import { AWSRegion } from "@/types";
-import { REGION_LABELS } from "@/lib/pricing";
+import { REGION_LABELS, REGION_GROUPS } from "@/lib/pricing";
 import { useCalculatorStore } from "@/store/calculatorStore";
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
+  SelectLabel,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
@@ -31,10 +33,17 @@ export function RegionSelect() {
           <SelectValue placeholder="Select region" />
         </SelectTrigger>
         <SelectContent>
-          {Object.values(AWSRegion).map((r) => (
-            <SelectItem key={r} value={r}>
-              {REGION_LABELS[r]}
-            </SelectItem>
+          {REGION_GROUPS.map((group) => (
+            <SelectGroup key={group.label}>
+              <SelectLabel className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                {group.label}
+              </SelectLabel>
+              {group.regions.map((r) => (
+                <SelectItem key={r} value={r}>
+                  {REGION_LABELS[r]}
+                </SelectItem>
+              ))}
+            </SelectGroup>
           ))}
         </SelectContent>
       </Select>

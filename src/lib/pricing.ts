@@ -127,6 +127,8 @@ export const INTELLIGENT_TIERING_STORAGE_RATES = {
   frequent: 0.023,
   infrequent: 0.0125,
   archiveInstant: 0.004,
+  archiveAccess: 0.0036,
+  deepArchiveAccess: 0.00099,
 };
 
 export const GLACIER_RETRIEVAL_COSTS: Record<
@@ -147,21 +149,46 @@ export const DEEP_ARCHIVE_RETRIEVAL_COSTS: Record<
 };
 
 export const REGIONAL_MULTIPLIERS: Record<AWSRegion, number> = {
+  // North America
   [AWSRegion.US_EAST_1]: 1.0,
   [AWSRegion.US_EAST_2]: 1.0,
   [AWSRegion.US_WEST_1]: 1.03,
   [AWSRegion.US_WEST_2]: 1.0,
   [AWSRegion.CA_CENTRAL_1]: 1.0,
+  [AWSRegion.CA_WEST_1]: 1.03,
+  [AWSRegion.MX_CENTRAL_1]: 1.08,
+  // South America
   [AWSRegion.SA_EAST_1]: 1.76,
-  [AWSRegion.US_GOV_WEST_1]: 1.22,
+  // Europe
   [AWSRegion.EU_CENTRAL_1]: 1.02,
+  [AWSRegion.EU_CENTRAL_2]: 1.08,
   [AWSRegion.EU_WEST_1]: 1.0,
   [AWSRegion.EU_WEST_2]: 1.02,
+  [AWSRegion.EU_WEST_3]: 1.02,
+  [AWSRegion.EU_SOUTH_1]: 1.05,
+  [AWSRegion.EU_SOUTH_2]: 1.03,
   [AWSRegion.EU_NORTH_1]: 1.0,
+  // Africa
+  [AWSRegion.AF_SOUTH_1]: 1.15,
+  // Middle East
+  [AWSRegion.ME_CENTRAL_1]: 1.18,
+  [AWSRegion.ME_SOUTH_1]: 1.15,
+  [AWSRegion.IL_CENTRAL_1]: 1.15,
+  // Asia Pacific
   [AWSRegion.AP_NORTHEAST_1]: 1.05,
+  [AWSRegion.AP_NORTHEAST_2]: 1.05,
+  [AWSRegion.AP_NORTHEAST_3]: 1.05,
   [AWSRegion.AP_SOUTHEAST_1]: 1.05,
-  [AWSRegion.AP_SOUTH_1]: 1.08,
   [AWSRegion.AP_SOUTHEAST_2]: 1.05,
+  [AWSRegion.AP_SOUTHEAST_3]: 1.10,
+  [AWSRegion.AP_SOUTHEAST_4]: 1.08,
+  [AWSRegion.AP_SOUTHEAST_5]: 1.08,
+  [AWSRegion.AP_SOUTHEAST_7]: 1.08,
+  [AWSRegion.AP_EAST_1]: 1.10,
+  [AWSRegion.AP_SOUTH_1]: 1.08,
+  // GovCloud
+  [AWSRegion.US_GOV_WEST_1]: 1.22,
+  [AWSRegion.US_GOV_EAST_1]: 1.22,
 };
 
 export const EOZ_REGIONS: AWSRegion[] = [
@@ -175,22 +202,116 @@ export const EOZ_REGIONS: AWSRegion[] = [
 ];
 
 export const REGION_LABELS: Record<AWSRegion, string> = {
+  // North America
   [AWSRegion.US_EAST_1]: "US East (N. Virginia)",
   [AWSRegion.US_EAST_2]: "US East (Ohio)",
   [AWSRegion.US_WEST_1]: "US West (N. California)",
   [AWSRegion.US_WEST_2]: "US West (Oregon)",
   [AWSRegion.CA_CENTRAL_1]: "Canada (Central)",
+  [AWSRegion.CA_WEST_1]: "Canada (West)",
+  [AWSRegion.MX_CENTRAL_1]: "Mexico (Central)",
+  // South America
   [AWSRegion.SA_EAST_1]: "South America (São Paulo)",
-  [AWSRegion.US_GOV_WEST_1]: "AWS GovCloud (US-West)",
+  // Europe
   [AWSRegion.EU_CENTRAL_1]: "Europe (Frankfurt)",
+  [AWSRegion.EU_CENTRAL_2]: "Europe (Zurich)",
   [AWSRegion.EU_WEST_1]: "Europe (Ireland)",
   [AWSRegion.EU_WEST_2]: "Europe (London)",
+  [AWSRegion.EU_WEST_3]: "Europe (Paris)",
+  [AWSRegion.EU_SOUTH_1]: "Europe (Milan)",
+  [AWSRegion.EU_SOUTH_2]: "Europe (Spain)",
   [AWSRegion.EU_NORTH_1]: "Europe (Stockholm)",
+  // Africa
+  [AWSRegion.AF_SOUTH_1]: "Africa (Cape Town)",
+  // Middle East
+  [AWSRegion.ME_CENTRAL_1]: "Middle East (UAE)",
+  [AWSRegion.ME_SOUTH_1]: "Middle East (Bahrain)",
+  [AWSRegion.IL_CENTRAL_1]: "Israel (Tel Aviv)",
+  // Asia Pacific
   [AWSRegion.AP_NORTHEAST_1]: "Asia Pacific (Tokyo)",
+  [AWSRegion.AP_NORTHEAST_2]: "Asia Pacific (Seoul)",
+  [AWSRegion.AP_NORTHEAST_3]: "Asia Pacific (Osaka)",
   [AWSRegion.AP_SOUTHEAST_1]: "Asia Pacific (Singapore)",
-  [AWSRegion.AP_SOUTH_1]: "Asia Pacific (Mumbai)",
   [AWSRegion.AP_SOUTHEAST_2]: "Asia Pacific (Sydney)",
+  [AWSRegion.AP_SOUTHEAST_3]: "Asia Pacific (Jakarta)",
+  [AWSRegion.AP_SOUTHEAST_4]: "Asia Pacific (New Zealand)",
+  [AWSRegion.AP_SOUTHEAST_5]: "Asia Pacific (Malaysia)",
+  [AWSRegion.AP_SOUTHEAST_7]: "Asia Pacific (Thailand)",
+  [AWSRegion.AP_EAST_1]: "Asia Pacific (Hong Kong)",
+  [AWSRegion.AP_SOUTH_1]: "Asia Pacific (Mumbai)",
+  // GovCloud
+  [AWSRegion.US_GOV_WEST_1]: "AWS GovCloud (US-West)",
+  [AWSRegion.US_GOV_EAST_1]: "AWS GovCloud (US-East)",
 };
+
+export type RegionGroup = {
+  label: string;
+  regions: AWSRegion[];
+};
+
+export const REGION_GROUPS: RegionGroup[] = [
+  {
+    label: "North America",
+    regions: [
+      AWSRegion.US_EAST_1,
+      AWSRegion.US_EAST_2,
+      AWSRegion.US_WEST_1,
+      AWSRegion.US_WEST_2,
+      AWSRegion.CA_CENTRAL_1,
+      AWSRegion.CA_WEST_1,
+      AWSRegion.MX_CENTRAL_1,
+    ],
+  },
+  {
+    label: "South America",
+    regions: [AWSRegion.SA_EAST_1],
+  },
+  {
+    label: "Europe",
+    regions: [
+      AWSRegion.EU_CENTRAL_1,
+      AWSRegion.EU_CENTRAL_2,
+      AWSRegion.EU_WEST_1,
+      AWSRegion.EU_WEST_2,
+      AWSRegion.EU_WEST_3,
+      AWSRegion.EU_SOUTH_1,
+      AWSRegion.EU_SOUTH_2,
+      AWSRegion.EU_NORTH_1,
+    ],
+  },
+  {
+    label: "Africa",
+    regions: [AWSRegion.AF_SOUTH_1],
+  },
+  {
+    label: "Middle East",
+    regions: [
+      AWSRegion.ME_CENTRAL_1,
+      AWSRegion.ME_SOUTH_1,
+      AWSRegion.IL_CENTRAL_1,
+    ],
+  },
+  {
+    label: "Asia Pacific",
+    regions: [
+      AWSRegion.AP_NORTHEAST_1,
+      AWSRegion.AP_NORTHEAST_2,
+      AWSRegion.AP_NORTHEAST_3,
+      AWSRegion.AP_SOUTHEAST_1,
+      AWSRegion.AP_SOUTHEAST_2,
+      AWSRegion.AP_SOUTHEAST_3,
+      AWSRegion.AP_SOUTHEAST_4,
+      AWSRegion.AP_SOUTHEAST_5,
+      AWSRegion.AP_SOUTHEAST_7,
+      AWSRegion.AP_EAST_1,
+      AWSRegion.AP_SOUTH_1,
+    ],
+  },
+  {
+    label: "GovCloud",
+    regions: [AWSRegion.US_GOV_WEST_1, AWSRegion.US_GOV_EAST_1],
+  },
+];
 
 export const STORAGE_CLASS_LABELS: Record<StorageClass, string> = {
   [StorageClass.EXPRESS_ONE_ZONE]: "S3 Express One Zone",

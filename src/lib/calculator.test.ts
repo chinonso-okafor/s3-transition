@@ -26,6 +26,7 @@ const workedExample: CalculatorInputs = {
   isMutable: false,
   accessPatternConfidence: "low",
   glacierRetrievalTier: "standard",
+  itArchiveTiersEnabled: false,
 };
 
 // --- Helper ---
@@ -250,6 +251,7 @@ describe("Small Object Penalty", () => {
     isMutable: false,
     accessPatternConfidence: "medium",
     glacierRetrievalTier: "standard",
+    itArchiveTiersEnabled: false,
   };
 
   it("detects small object penalty when avgObjectSizeKB < 128", () => {
@@ -666,5 +668,143 @@ describe("Confidence & Warnings", () => {
     };
     const output = calculate(highConfInputs);
     expect(output.warnings.some((w) => w.includes("Low confidence"))).toBe(false);
+  });
+});
+
+// ============================================================
+// 16. IT Archive Access Tier Distributions
+// ============================================================
+
+describe("IT Archive Access Tiers", () => {
+  const baseITInputs: CalculatorInputs = {
+    ...workedExample,
+    itArchiveTiersEnabled: false,
+  };
+
+  it("archive tiers disabled: low confidence uses 70/30 distribution", () => {
+    const tco = calcMonthlyTCO(
+      StorageClass.INTELLIGENT_TIERING,
+      { ...baseITInputs, accessPatternConfidence: "low" },
+      918.7
+    );
+    // 70% × 0.023 + 30% × 0.0125 = 0.0161 + 0.00375 = 0.01985
+    const expectedRate = 0.7 * 0.023 + 0.3 * 0.0125;
+    const expectedStorage = 78_765 * expectedRate;
+    expect(tco.storage).toBeCloseTo(expectedStorage, 0);
+  });
+
+  it("archive tiers enabled produces lower blended rate than disabled (low confidence)", () => {
+    const tcoDisabled = calcMonthlyTCO(
+      StorageClass.INTELLIGENT_TIERING,
+      { ...baseITInputs, accessPatternConfidence: "low", itArchiveTiersEnabled: false },
+      918.7
+    );
+    const tcoEnabled = calcMonthlyTCO(
+      StorageClass.INTELLIGENT_TIERING,
+      { ...baseITInputs, accessPatternConfidence: "low", itArchiveTiersEnabled: true },
+      918.7
+    );
+    // Archive tiers enabled → more data in cheaper tiers → lower storage cost
+    expect(tcoEnabled.storage).toBeLessThan(tcoDisabled.storage);
+  });
+
+  it("archive tiers enabled: medium confidence uses 50/30/12/5/3 distribution", () => {
+    const tco = calcMonthlyTCO(
+      StorageClass.INTELLIGENT_TIERING,
+      { ...baseITInputs, accessPatternConfidence: "medium", itArchiveTiersEnabled: true },
+      918.7
+    );
+    const expectedRate =
+      0.5 * 0.023 +
+      0.3 * 0.0125 +
+      0.12 * 0.004 +
+      0.05 * 0.0036 +
+      0.03 * 0.00099;
+    const expectedStorage = 78_765 * expectedRate;
+    expect(tco.storage).toBeCloseTo(expectedStorage, 0);
+  });
+
+  it("archive tiers enabled: high confidence uses 40/30/15/10/5 distribution", () => {
+    const tco = calcMonthlyTCO(
+      StorageClass.INTELLIGENT_TIERING,
+      { ...baseITInputs, accessPatternConfidence: "high", itArchiveTiersEnabled: true },
+      918.7
+    );
+    const expectedRate =
+      0.4 * 0.023 +
+      0.3 * 0.0125 +
+      0.15 * 0.004 +
+      0.1 * 0.0036 +
+      0.05 * 0.00099;
+    const expectedStorage = 78_765 * expectedRate;
+    expect(tco.storage).toBeCloseTo(expectedStorage, 0);
+  });
+
+  it("archive tiers warning appears when enabled", () => {
+    const archiveInputs: CalculatorInputs = {
+      ...workedExample,
+      itArchiveTiersEnabled: true,
+    };
+    const output = calculate(archiveInputs);
+    expect(
+      output.warnings.some((w) => w.includes("Archive Access tiers require asynchronous retrieval"))
+    ).toBe(true);
+  });
+
+  it("no archive tiers warning when disabled", () => {
+    const output = calculate(workedExample);
+    expect(
+      output.warnings.some((w) => w.includes("Archive Access tiers"))
+    ).toBe(false);
+  });
+});
+
+// ============================================================
+// 17. EOZ as Current Class
+// ============================================================
+
+describe("EOZ as Current Class", () => {
+  const eozCurrentInputs: CalculatorInputs = {
+    ...workedExample,
+    currentClass: StorageClass.EXPRESS_ONE_ZONE,
+  };
+
+  it("suppresses EOZ card when current class is EOZ", () => {
+    const output = calculate(eozCurrentInputs);
+    expect(output.eozResult).toBeNull();
+  });
+
+  it("recommends Standard as a cost-reduction path from EOZ", () => {
+    const output = calculate(eozCurrentInputs);
+    // Standard should be among the candidates
+    const standard = output.results.find(
+      (r) => r.storageClass === StorageClass.STANDARD
+    );
+    expect(standard).toBeDefined();
+    expect(standard!.monthlyCost.total).toBeLessThan(
+      output.results.find(
+        (r) => r.storageClass === StorageClass.EXPRESS_ONE_ZONE
+      )!.monthlyCost.total
+    );
+  });
+
+  it("includes EOZ as the current class row in results", () => {
+    const output = calculate(eozCurrentInputs);
+    const eozRow = output.results.find(
+      (r) => r.storageClass === StorageClass.EXPRESS_ONE_ZONE
+    );
+    expect(eozRow).toBeDefined();
+    expect(eozRow!.monthlySavings).toBe(0);
+  });
+
+  it("EOZ current TCO includes upload fees", () => {
+    const output = calculate(eozCurrentInputs);
+    const eozRow = output.results.find(
+      (r) => r.storageClass === StorageClass.EXPRESS_ONE_ZONE
+    )!;
+    // Storage: 78765 × 0.11 = 8664.15
+    // Upload: 78765 × 0.0032 = 252.05 (included in requests)
+    // Total should be significantly higher than Standard
+    expect(eozRow.monthlyCost.total).toBeGreaterThan(8000);
   });
 });

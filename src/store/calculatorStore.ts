@@ -28,6 +28,7 @@ const defaultInputs: CalculatorInputs = {
   isMutable: false,
   accessPatternConfidence: "medium",
   glacierRetrievalTier: "standard",
+  itArchiveTiersEnabled: false,
 };
 
 function computeOutput(inputs: CalculatorInputs): CalculatorOutput | null {
