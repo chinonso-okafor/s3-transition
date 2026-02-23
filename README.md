@@ -6,7 +6,7 @@ No existing AWS-native or third-party tool models the complete S3 cost surface i
 
 ## Live Beta
 
-[YOUR_VERCEL_URL](https://s3-transition.vercel.app/)
+[S3 Optimizer Beta](https://s3-transition.vercel.app)
 
 ## Local Setup
 
