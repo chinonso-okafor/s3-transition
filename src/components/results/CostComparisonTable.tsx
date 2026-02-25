@@ -136,7 +136,7 @@ export function CostComparisonTable({ output }: CostComparisonTableProps) {
                     </td>
                     <td className="py-3 pl-3 tabular-nums">
                       {isCurrent ? (
-                        <span className="text-[#6b7280]">\u2014</span>
+                        <span className="text-[#6b7280]">{"\u2014"}</span>
                       ) : diff > 0 ? (
                         <span className="text-[#16a34a] font-medium">
                           -{formatCurrency(diff)}
