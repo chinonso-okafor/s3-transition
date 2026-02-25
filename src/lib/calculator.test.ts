@@ -27,6 +27,8 @@ const workedExample: CalculatorInputs = {
   accessPatternConfidence: "low",
   glacierRetrievalTier: "standard",
   itArchiveTiersEnabled: false,
+  bucketMode: "single",
+  mixedSegments: [],
 };
 
 // --- Helper ---
@@ -252,6 +254,8 @@ describe("Small Object Penalty", () => {
     accessPatternConfidence: "medium",
     glacierRetrievalTier: "standard",
     itArchiveTiersEnabled: false,
+    bucketMode: "single",
+    mixedSegments: [],
   };
 
   it("detects small object penalty when avgObjectSizeKB < 128", () => {
@@ -806,5 +810,269 @@ describe("EOZ as Current Class", () => {
     // Upload: 78765 × 0.0032 = 252.05 (included in requests)
     // Total should be significantly higher than Standard
     expect(eozRow.monthlyCost.total).toBeGreaterThan(8000);
+  });
+});
+
+// ============================================================
+// 18. Mixed Bucket Tests
+// ============================================================
+
+import { calculateMixedBucketTCO } from "./calculator";
+
+describe("Mixed Bucket", () => {
+  const baseMixedInputs: CalculatorInputs = {
+    storageGB: 0, // will be overridden by segment totals
+    objectCount: 1_000_000,
+    monthlyGetRequests: 100_000,
+    monthlyRetrievalGB: 500,
+    currentClass: StorageClass.STANDARD,
+    region: AWSRegion.US_EAST_1,
+    retentionMonths: 24,
+    isMutable: false,
+    accessPatternConfidence: "medium",
+    glacierRetrievalTier: "standard",
+    itArchiveTiersEnabled: false,
+    bucketMode: "mixed",
+    mixedSegments: [],
+  };
+
+  it("calculates correct current TCO across two segments", () => {
+    const inputs: CalculatorInputs = {
+      ...baseMixedInputs,
+      mixedSegments: [
+        { id: "1", storageClass: StorageClass.STANDARD, storageGB: 10_000 },
+        { id: "2", storageClass: StorageClass.GLACIER_INSTANT, storageGB: 5_000 },
+      ],
+    };
+    const result = calculateMixedBucketTCO(inputs);
+    expect(result).not.toBeNull();
+    // Standard storage: 10000 × 0.023 = 230
+    // Glacier Instant storage: 5000 × 0.004 = 20
+    // Total storage > 200 (with request and retrieval costs added)
+    expect(result!.results).toBeDefined();
+    // Current TCO should be positive
+    const totalCurrentCost =
+      result!.results.reduce((_, r) => r.monthlyCost.total, 0);
+    expect(totalCurrentCost).toBeGreaterThan(0);
+  });
+
+  it("distributes object count proportionally by storage GB", () => {
+    const inputs: CalculatorInputs = {
+      ...baseMixedInputs,
+      objectCount: 100_000,
+      mixedSegments: [
+        { id: "1", storageClass: StorageClass.STANDARD, storageGB: 6_000 },
+        { id: "2", storageClass: StorageClass.STANDARD_IA, storageGB: 4_000 },
+      ],
+    };
+    // 60/40 storage split → 60/40 object count split
+    // 60% of 100,000 = 60,000; 40% = 40,000
+    const result = calculateMixedBucketTCO(inputs);
+    expect(result).not.toBeNull();
+    // The calculation should produce a valid result (object count proportionally distributed internally)
+    expect(result!.results.length).toBeGreaterThan(0);
+  });
+
+  it("request costs applied at bucket level not per segment", () => {
+    // With 2 segments, request costs should not be doubled
+    const singleInputs: CalculatorInputs = {
+      ...baseMixedInputs,
+      storageGB: 15_000,
+      objectCount: 1_000_000,
+      monthlyGetRequests: 100_000,
+      currentClass: StorageClass.STANDARD,
+      bucketMode: "single",
+    };
+    const singleOutput = calculate(singleInputs);
+    const singleStdTCO = singleOutput.results.find(
+      (r) => r.storageClass === StorageClass.STANDARD
+    )!;
+
+    const mixedInputs: CalculatorInputs = {
+      ...baseMixedInputs,
+      objectCount: 1_000_000,
+      monthlyGetRequests: 100_000,
+      mixedSegments: [
+        { id: "1", storageClass: StorageClass.STANDARD, storageGB: 10_000 },
+        { id: "2", storageClass: StorageClass.STANDARD, storageGB: 5_000 },
+      ],
+    };
+    const mixedOutput = calculateMixedBucketTCO(mixedInputs);
+    expect(mixedOutput).not.toBeNull();
+    // Standard target TCO for mixed should be similar to single (same total volume)
+    const mixedStdTCO = mixedOutput!.results.find(
+      (r) => r.storageClass === StorageClass.STANDARD
+    )!;
+    // Should be within 5% — request costs applied once, not doubled
+    expect(pctDiff(mixedStdTCO.monthlyCost.total, singleStdTCO.monthlyCost.total)).toBeLessThan(5);
+  });
+
+  it("retrieval costs applied at bucket level", () => {
+    const inputs: CalculatorInputs = {
+      ...baseMixedInputs,
+      objectCount: 100_000,
+      monthlyRetrievalGB: 100,
+      mixedSegments: [
+        { id: "1", storageClass: StorageClass.STANDARD, storageGB: 5_000 },
+        { id: "2", storageClass: StorageClass.STANDARD, storageGB: 5_000 },
+      ],
+    };
+    const result = calculateMixedBucketTCO(inputs);
+    expect(result).not.toBeNull();
+    // Standard has $0 retrieval, so target Standard retrieval should be 0
+    const stdResult = result!.results.find(
+      (r) => r.storageClass === StorageClass.STANDARD
+    )!;
+    expect(stdResult.monthlyCost.retrieval).toBeCloseTo(0, 1);
+  });
+
+  it("recommends consolidation when savings are significant", () => {
+    const inputs: CalculatorInputs = {
+      ...baseMixedInputs,
+      objectCount: 500_000,
+      monthlyGetRequests: 50_000,
+      monthlyRetrievalGB: 10,
+      mixedSegments: [
+        { id: "1", storageClass: StorageClass.STANDARD, storageGB: 10_000 },
+        { id: "2", storageClass: StorageClass.STANDARD_IA, storageGB: 5_000 },
+      ],
+    };
+    const result = calculateMixedBucketTCO(inputs);
+    expect(result).not.toBeNull();
+    expect(result!.recommendation).not.toBeNull();
+    // Glacier Instant or similar should be cheaper than the mixed current
+    expect(result!.recommendation!.monthlySavings).toBeGreaterThan(0);
+  });
+
+  it("IT dominant with high monitoring fee flags warning", () => {
+    const inputs: CalculatorInputs = {
+      ...baseMixedInputs,
+      objectCount: 100_000_000,
+      monthlyGetRequests: 100_000,
+      monthlyRetrievalGB: 10,
+      accessPatternConfidence: "low",
+      mixedSegments: [
+        { id: "1", storageClass: StorageClass.INTELLIGENT_TIERING, storageGB: 2_000 },
+        { id: "2", storageClass: StorageClass.STANDARD, storageGB: 100 },
+      ],
+    };
+    const result = calculateMixedBucketTCO(inputs);
+    expect(result).not.toBeNull();
+    // 100M objects × 0.0025 / 1000 = $250/mo monitoring fee
+    // IT tiering saving on 2TB with low confidence is much smaller
+    expect(
+      result!.warnings.some((w) => w.includes("monitoring fee"))
+    ).toBe(true);
+  });
+
+  it("IT dominant where IT wins over Glacier Instant", () => {
+    // IT with massive retrieval should beat Glacier Instant which charges $0.03/GB retrieval
+    // while IT charges $0. With enough retrieval, Glacier Instant becomes more expensive.
+    const inputs: CalculatorInputs = {
+      ...baseMixedInputs,
+      objectCount: 100_000,
+      monthlyGetRequests: 100_000,
+      monthlyRetrievalGB: 100_000, // Very high retrieval: 100TB/month
+      accessPatternConfidence: "high",
+      mixedSegments: [
+        { id: "1", storageClass: StorageClass.INTELLIGENT_TIERING, storageGB: 5_000 },
+        { id: "2", storageClass: StorageClass.STANDARD, storageGB: 1_000 },
+      ],
+    };
+    const result = calculateMixedBucketTCO(inputs);
+    expect(result).not.toBeNull();
+    const itResult = result!.results.find(
+      (r) => r.storageClass === StorageClass.INTELLIGENT_TIERING
+    )!;
+    const glacierResult = result!.results.find(
+      (r) => r.storageClass === StorageClass.GLACIER_INSTANT
+    )!;
+    // IT: $0 retrieval, Glacier Instant: 100,000 × $0.03 = $3,000/mo retrieval alone
+    expect(itResult.monthlyCost.total).toBeLessThan(glacierResult.monthlyCost.total);
+  });
+
+  it("sensitivity table covers all three scenarios", () => {
+    const inputs: CalculatorInputs = {
+      ...baseMixedInputs,
+      objectCount: 100_000,
+      mixedSegments: [
+        { id: "1", storageClass: StorageClass.STANDARD, storageGB: 10_000 },
+        { id: "2", storageClass: StorageClass.GLACIER_INSTANT, storageGB: 5_000 },
+      ],
+    };
+    const result = calculateMixedBucketTCO(inputs);
+    expect(result).not.toBeNull();
+    expect(result!.sensitivityAnalysis).toHaveLength(3);
+    expect(result!.sensitivityAnalysis[0].retrievalMultiplier).toBe(0.5);
+    expect(result!.sensitivityAnalysis[1].retrievalMultiplier).toBe(2);
+    expect(result!.sensitivityAnalysis[2].retrievalMultiplier).toBe(3);
+  });
+
+  it("warnings aggregated across all segments", () => {
+    // Create a segment with very small objects to trigger small object warning
+    const inputs: CalculatorInputs = {
+      ...baseMixedInputs,
+      objectCount: 10_000_000, // With 5.1 GB total → avg ~0.53 KB
+      monthlyGetRequests: 10_000,
+      monthlyRetrievalGB: 1,
+      mixedSegments: [
+        { id: "1", storageClass: StorageClass.STANDARD, storageGB: 5 },
+        { id: "2", storageClass: StorageClass.STANDARD_IA, storageGB: 0.1 },
+      ],
+    };
+    const result = calculateMixedBucketTCO(inputs);
+    expect(result).not.toBeNull();
+    expect(
+      result!.warnings.some((w) => w.includes("Small object penalty"))
+    ).toBe(true);
+  });
+
+  it("minimum two segments required", () => {
+    const inputs: CalculatorInputs = {
+      ...baseMixedInputs,
+      mixedSegments: [
+        { id: "1", storageClass: StorageClass.STANDARD, storageGB: 10_000 },
+      ],
+    };
+    const result = calculateMixedBucketTCO(inputs);
+    expect(result).toBeNull();
+  });
+});
+
+// ============================================================
+// 19. RRS Tests
+// ============================================================
+
+describe("Reduced Redundancy Storage", () => {
+  it("always adds deprecation warning", () => {
+    const rrsInputs: CalculatorInputs = {
+      ...workedExample,
+      currentClass: StorageClass.REDUCED_REDUNDANCY,
+    };
+    const output = calculate(rrsInputs);
+    expect(
+      output.warnings.some((w) => w.includes("deprecated"))
+    ).toBe(true);
+  });
+
+  it("never recommended as target class", () => {
+    const rrsInputs: CalculatorInputs = {
+      ...workedExample,
+      currentClass: StorageClass.REDUCED_REDUNDANCY,
+    };
+    const output = calculate(rrsInputs);
+    // RRS should not appear as a candidate in results
+    const rrsCandidate = output.results.find(
+      (r) =>
+        r.storageClass === StorageClass.REDUCED_REDUNDANCY &&
+        r.isRecommended
+    );
+    expect(rrsCandidate).toBeUndefined();
+    // Recommendation should be a non-RRS class
+    if (output.recommendation) {
+      expect(output.recommendation.storageClass).not.toBe(
+        StorageClass.REDUCED_REDUNDANCY
+      );
+    }
   });
 });

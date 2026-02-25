@@ -104,6 +104,20 @@ export const PRICING: Record<StorageClass, StorageClassPricing> = {
       AWSRegion.EU_NORTH_1,
     ],
   },
+  [StorageClass.REDUCED_REDUNDANCY]: {
+    storagePerGB: 0.024,
+    putPer1K: 0.005,
+    getPer1K: 0.0004,
+    retrievalPerGB: 0,
+    transitionPer1K: 0,
+    minDurationDays: 0,
+    minObjectSizeKB: 0,
+    monitoringPer1KObjects: 0,
+    availableRegions: "all",
+    isDeprecated: true,
+    deprecationNote:
+      "AWS deprecated RRS. It offers lower durability than Standard at similar cost. Migrate to S3 Standard or Standard-IA.",
+  },
 };
 
 export const EOZ_PRICING: EOZPricing = {
@@ -322,4 +336,5 @@ export const STORAGE_CLASS_LABELS: Record<StorageClass, string> = {
   [StorageClass.GLACIER_INSTANT]: "S3 Glacier Instant Retrieval",
   [StorageClass.GLACIER_FLEXIBLE]: "S3 Glacier Flexible Retrieval",
   [StorageClass.GLACIER_DEEP_ARCHIVE]: "S3 Glacier Deep Archive",
+  [StorageClass.REDUCED_REDUNDANCY]: "S3 Reduced Redundancy (Deprecated)",
 };

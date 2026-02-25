@@ -7,6 +7,7 @@ export enum StorageClass {
   GLACIER_INSTANT = "glacier-instant",
   GLACIER_FLEXIBLE = "glacier-flexible",
   GLACIER_DEEP_ARCHIVE = "glacier-deep-archive",
+  REDUCED_REDUNDANCY = "REDUCED_REDUNDANCY",
 }
 
 export enum AWSRegion {
@@ -52,6 +53,14 @@ export enum AWSRegion {
   US_GOV_EAST_1 = "us-gov-east-1",
 }
 
+export type BucketMode = "single" | "mixed";
+
+export interface MixedSegment {
+  id: string;
+  storageClass: StorageClass;
+  storageGB: number;
+}
+
 export type AccessPatternConfidence = "low" | "medium" | "high";
 
 export type GlacierRetrievalTier = "expedited" | "standard" | "bulk";
@@ -68,6 +77,8 @@ export interface CalculatorInputs {
   accessPatternConfidence: AccessPatternConfidence;
   glacierRetrievalTier: GlacierRetrievalTier;
   itArchiveTiersEnabled: boolean;
+  bucketMode: BucketMode;
+  mixedSegments: MixedSegment[];
 }
 
 export interface StorageClassResult {
@@ -141,6 +152,8 @@ export interface StorageClassPricing {
   minObjectSizeKB: number;
   monitoringPer1KObjects: number;
   availableRegions: "all" | AWSRegion[];
+  isDeprecated?: boolean;
+  deprecationNote?: string;
 }
 
 export interface EOZPricing {

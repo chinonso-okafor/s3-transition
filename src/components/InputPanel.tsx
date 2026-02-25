@@ -19,28 +19,43 @@ import { ConfidenceSelector } from "@/components/inputs/ConfidenceSelector";
 import { RetentionInput } from "@/components/inputs/RetentionInput";
 import { MutableToggle } from "@/components/inputs/MutableToggle";
 import { GlacierTierSelect } from "@/components/inputs/GlacierTierSelect";
+import { MixedSegmentTable } from "@/components/inputs/MixedSegmentTable";
+import { Button } from "@/components/ui/button";
 
-const ALL_CLASSES = Object.values(StorageClass);
+const SINGLE_MODE_CLASSES = [
+  StorageClass.EXPRESS_ONE_ZONE,
+  StorageClass.STANDARD,
+  StorageClass.INTELLIGENT_TIERING,
+  StorageClass.STANDARD_IA,
+  StorageClass.ONE_ZONE_IA,
+  StorageClass.GLACIER_INSTANT,
+  StorageClass.GLACIER_FLEXIBLE,
+  StorageClass.GLACIER_DEEP_ARCHIVE,
+  StorageClass.REDUCED_REDUNDANCY,
+];
 
 export function InputPanel() {
   const currentClass = useCalculatorStore((s) => s.inputs.currentClass);
   const region = useCalculatorStore((s) => s.inputs.region);
+  const bucketMode = useCalculatorStore((s) => s.inputs.bucketMode);
   const itArchiveTiersEnabled = useCalculatorStore(
     (s) => s.inputs.itArchiveTiersEnabled
   );
   const setInput = useCalculatorStore((s) => s.setInput);
+  const setBucketMode = useCalculatorStore((s) => s.setBucketMode);
   const output = useCalculatorStore((s) => s.output);
 
   const currentClassResult = output?.results.find(
     (r) => r.storageClass === currentClass
   );
-  const currentMonthlyCost = currentClassResult?.monthlyCost.total ?? null;
+  const currentMonthlyCost =
+    bucketMode === "single" ? (currentClassResult?.monthlyCost.total ?? null) : null;
 
   const showGlacierOptions = output !== null;
 
   // Only show EOZ in dropdown if region supports it
   const isEOZRegion = EOZ_REGIONS.includes(region);
-  const selectableClasses = ALL_CLASSES.filter(
+  const selectableClasses = SINGLE_MODE_CLASSES.filter(
     (sc) => sc !== StorageClass.EXPRESS_ONE_ZONE || isEOZRegion
   );
 
@@ -55,6 +70,41 @@ export function InputPanel() {
   return (
     <aside className="w-full lg:w-[400px] lg:shrink-0 bg-white border-b lg:border-b-0 lg:border-r border-border lg:overflow-y-auto">
       <div className="divide-y divide-border">
+        {/* Bucket Mode Toggle */}
+        <section className="px-6 py-5">
+          <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">
+            Bucket Mode
+          </h3>
+          <div className="flex rounded-lg border border-border overflow-hidden">
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => setBucketMode("single")}
+              className={`flex-1 rounded-none text-sm font-medium transition-colors ${
+                bucketMode === "single"
+                  ? "bg-[#2563eb] text-white hover:bg-[#2563eb] hover:text-white"
+                  : "bg-[#f9fafb] text-[#374151] hover:bg-[#f3f4f6]"
+              }`}
+            >
+              Single Storage Class
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => setBucketMode("mixed")}
+              className={`flex-1 rounded-none text-sm font-medium transition-colors ${
+                bucketMode === "mixed"
+                  ? "bg-[#2563eb] text-white hover:bg-[#2563eb] hover:text-white"
+                  : "bg-[#f9fafb] text-[#374151] hover:bg-[#f3f4f6]"
+              }`}
+            >
+              Mixed Storage Classes
+            </Button>
+          </div>
+        </section>
+
         {/* Section 1: Workload Profile */}
         <section className="px-6 py-5">
           <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-4">
@@ -62,7 +112,7 @@ export function InputPanel() {
           </h3>
           <div className="space-y-4">
             <RegionSelect />
-            <StorageInput />
+            {bucketMode === "single" && <StorageInput />}
             <ObjectCountInput />
           </div>
         </section>
@@ -78,51 +128,67 @@ export function InputPanel() {
           </div>
         </section>
 
-        {/* Section 3: Current Setup */}
+        {/* Section 3: Current Setup / Mixed Segments */}
         <section className="px-6 py-5">
-          <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-4">
-            Current Setup
-          </h3>
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <label
-                htmlFor="current-class"
-                className="text-sm font-medium leading-none text-foreground"
-              >
-                Current Storage Class
-              </label>
-              <Select
-                value={currentClass}
-                onValueChange={(value) =>
-                  setInput("currentClass", value as StorageClass)
-                }
-              >
-                <SelectTrigger
-                  id="current-class"
-                  aria-label="Current storage class"
-                >
-                  <SelectValue placeholder="Select current class" />
-                </SelectTrigger>
-                <SelectContent>
-                  {selectableClasses.map((sc) => (
-                    <SelectItem key={sc} value={sc}>
-                      {STORAGE_CLASS_LABELS[sc]}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            {currentMonthlyCost !== null && (
-              <div className="flex items-center justify-between rounded-lg border border-border bg-muted px-4 py-3">
-                <span className="text-sm text-muted-foreground">
-                  Current estimated monthly cost
-                </span>
-                <span className="text-sm font-semibold tabular-nums text-foreground">
-                  {formatCurrency(currentMonthlyCost)}
-                </span>
+          {bucketMode === "single" ? (
+            <>
+              <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-4">
+                Current Setup
+              </h3>
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <label
+                    htmlFor="current-class"
+                    className="text-sm font-medium leading-none text-foreground"
+                  >
+                    Current Storage Class
+                  </label>
+                  <Select
+                    value={currentClass}
+                    onValueChange={(value) =>
+                      setInput("currentClass", value as StorageClass)
+                    }
+                  >
+                    <SelectTrigger
+                      id="current-class"
+                      aria-label="Current storage class"
+                    >
+                      <SelectValue placeholder="Select current class" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {selectableClasses.map((sc) => (
+                        <SelectItem key={sc} value={sc}>
+                          {STORAGE_CLASS_LABELS[sc]}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                {/* RRS deprecation amber notice */}
+                {currentClass === StorageClass.REDUCED_REDUNDANCY && (
+                  <div className="rounded-lg border border-[#fde68a] bg-[#fffbeb] px-4 py-3 border-l-4 border-l-[#d97706]">
+                    <p className="text-sm text-[#92400e]">
+                      Reduced Redundancy Storage is deprecated by AWS. It offers
+                      lower durability than Standard at similar cost. This tool
+                      will include a migration recommendation in the results.
+                    </p>
+                  </div>
+                )}
+                {currentMonthlyCost !== null && (
+                  <div className="flex items-center justify-between rounded-lg border border-border bg-muted px-4 py-3">
+                    <span className="text-sm text-muted-foreground">
+                      Current estimated monthly cost
+                    </span>
+                    <span className="text-sm font-semibold tabular-nums text-foreground">
+                      {formatCurrency(currentMonthlyCost)}
+                    </span>
+                  </div>
+                )}
               </div>
-            )}
-          </div>
+            </>
+          ) : (
+            <MixedSegmentTable />
+          )}
         </section>
 
         {/* Section 4: Retention & Behavior */}

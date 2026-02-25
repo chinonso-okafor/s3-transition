@@ -13,6 +13,9 @@ interface EOZCardProps {
 export function EOZCard({ output }: EOZCardProps) {
   const { eozResult, inputs } = output;
 
+  // Suppress EOZ in mixed mode
+  if (inputs.bucketMode === "mixed") return null;
+
   if (!eozResult || inputs.currentClass !== StorageClass.STANDARD) return null;
 
   if (!eozResult.isEligible) {

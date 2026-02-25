@@ -18,11 +18,11 @@ async function fillInputs(
     isMutable?: boolean;
   }
 ) {
-  // Region select (if specified)
+  // Region select (if specified) — uses Combobox (Command) component
   if (opts.region) {
     await page.getByLabel("AWS Region").click();
     await page
-      .getByRole("option", { name: opts.region, exact: true })
+      .getByRole("option", { name: new RegExp(opts.region.replace(/[()]/g, "\\$&")) })
       .click();
   }
 
@@ -432,5 +432,236 @@ test.describe("Breakeven chart renders", () => {
     await expect(
       page.getByText("12-month ROI", { exact: false })
     ).toBeVisible();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Test 9: Mixed mode — toggle switches input panel
+// ---------------------------------------------------------------------------
+test.describe("Mixed mode: toggle switches input panel", () => {
+  test("clicking Mixed Storage Classes replaces single class dropdown with segment table", async ({
+    page,
+  }) => {
+    await page.goto("/");
+
+    // Click "Mixed Storage Classes" button
+    await page.getByRole("button", { name: "Mixed Storage Classes" }).click();
+
+    // Single class dropdown should be gone
+    await expect(page.getByLabel("Current storage class")).not.toBeVisible();
+
+    // Segment table should be visible with "Storage Class Distribution" heading
+    await expect(
+      page.getByText("Storage Class Distribution")
+    ).toBeVisible();
+
+    // Should have the "Add Storage Class" button
+    await expect(
+      page.getByRole("button", { name: /Add Storage Class/ })
+    ).toBeVisible();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Test 10: Mixed mode — two segment happy path
+// ---------------------------------------------------------------------------
+test.describe("Mixed mode: two segment happy path", () => {
+  test("Standard + Glacier Instant produces recommendation and cost comparison", async ({
+    page,
+  }) => {
+    await page.goto("/");
+
+    // Switch to mixed mode
+    await page.getByRole("button", { name: "Mixed Storage Classes" }).click();
+
+    // Fill in object count first
+    await page.locator("#object-count").fill("1000000");
+
+    // Fill segment storage values — the two default rows
+    const gbInputs = page.locator('input[type="number"][aria-label*="Storage GB"]');
+    await gbInputs.nth(0).fill("10000");
+    await gbInputs.nth(1).fill("5000");
+
+    // Select storage classes — the first default should already be Standard
+    // Set the second to Glacier Instant
+    const selects = page.locator('[aria-label*="Storage class for segment"]');
+    await selects.nth(1).click();
+    await page.getByRole("option", { name: "S3 Glacier Instant Retrieval" }).click();
+
+    // Fill remaining inputs
+    await page.locator("#monthly-get-requests").fill("100000");
+    await page.locator("#monthly-retrieval-gb").fill("500");
+    await page.locator("#retention-months").fill("24");
+
+    // Wait for results
+    await expect(
+      page.getByRole("heading", { name: "Recommendation" })
+    ).toBeVisible({ timeout: 10000 });
+
+    // Verify cost comparison table shows
+    await expect(
+      page.getByRole("heading", { name: "Cost Comparison" })
+    ).toBeVisible();
+
+    // Verify savings are positive
+    const savingsText = page.locator("[class*='text-\\[32px\\]']");
+    await expect(savingsText).toBeVisible();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Test 11: Mixed mode — IT dominant monitoring fee warning
+// ---------------------------------------------------------------------------
+test.describe("Mixed mode: IT dominant monitoring fee warning", () => {
+  test("shows IT monitoring fee warning with many objects in IT", async ({
+    page,
+  }) => {
+    await page.goto("/");
+
+    // Switch to mixed mode
+    await page.getByRole("button", { name: "Mixed Storage Classes" }).click();
+
+    // Fill object count — very high (drives monitoring fee up)
+    await page.locator("#object-count").fill("150000000");
+
+    // Set first segment to Intelligent-Tiering with small storage
+    // so tiering savings are small but monitoring fee ($375/mo) is huge
+    const selects = page.locator('[aria-label*="Storage class for segment"]');
+    await selects.nth(0).click();
+    await page.getByRole("option", { name: "S3 Intelligent-Tiering" }).click();
+
+    const gbInputs = page.locator('input[type="number"][aria-label*="Storage GB"]');
+    await gbInputs.nth(0).fill("100");
+    await gbInputs.nth(1).fill("50");
+
+    // Fill remaining inputs
+    await page.locator("#monthly-get-requests").fill("100000");
+    await page.locator("#monthly-retrieval-gb").fill("10");
+    await page.locator("#retention-months").fill("24");
+
+    // Wait for results
+    await expect(
+      page.getByRole("heading", { name: "Recommendation" })
+    ).toBeVisible({ timeout: 10000 });
+
+    // Verify warnings panel shows IT monitoring fee warning
+    await expect(page.getByText("Warnings & Caveats")).toBeVisible();
+    await expect(
+      page.getByText("monitoring fee", { exact: false })
+    ).toBeVisible();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Test 12: RRS triggers deprecation warning
+// ---------------------------------------------------------------------------
+test.describe("Mixed mode: RRS triggers deprecation warning", () => {
+  test("selecting RRS shows amber notice and deprecation warning in results", async ({
+    page,
+  }) => {
+    await page.goto("/");
+
+    // Ensure we are in single mode
+    await page.getByRole("button", { name: "Single Storage Class" }).click();
+
+    // Fill required inputs first
+    await page.locator("#storage-gb").fill("1000");
+    await page.locator("#object-count").fill("100000");
+    await page.locator("#monthly-get-requests").fill("50000");
+    await page.locator("#monthly-retrieval-gb").fill("10");
+    await page.locator("#retention-months").fill("12");
+
+    // Select Reduced Redundancy Storage
+    await page.getByLabel("Current storage class").click();
+    await page
+      .getByRole("option", { name: /Reduced Redundancy/ })
+      .click();
+
+    // Verify amber inline notice appears below dropdown
+    await expect(
+      page.getByText("Reduced Redundancy Storage is deprecated by AWS", {
+        exact: false,
+      })
+    ).toBeVisible();
+
+    // Wait for results
+    await expect(
+      page.getByRole("heading", { name: "Recommendation" })
+    ).toBeVisible({ timeout: 10000 });
+
+    // Verify deprecation warning in results warnings panel
+    await expect(page.getByText("Warnings & Caveats")).toBeVisible();
+    await expect(
+      page.getByText("AWS deprecated RRS", { exact: false })
+    ).toBeVisible();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Test 13: Mixed mode — fewer than two segments suppresses output
+// ---------------------------------------------------------------------------
+test.describe("Mixed mode: fewer than two segments suppresses output", () => {
+  test("mixed mode with empty segments shows empty state", async ({
+    page,
+  }) => {
+    await page.goto("/");
+
+    // Switch to mixed mode
+    await page.getByRole("button", { name: "Mixed Storage Classes" }).click();
+
+    // Fill only object count — segments have no GB values
+    await page.locator("#object-count").fill("100000");
+
+    // Results panel should show the empty state
+    await expect(
+      page.getByText("Enter your workload details to see recommendations")
+    ).toBeVisible();
+
+    // Recommendation should not be visible
+    await expect(
+      page.getByRole("heading", { name: "Recommendation" })
+    ).not.toBeVisible();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Test 14: Mixed mode — EOZ card suppressed
+// ---------------------------------------------------------------------------
+test.describe("Mixed mode: EOZ card suppressed", () => {
+  test("EOZ Performance card does not render in mixed mode", async ({
+    page,
+  }) => {
+    await page.goto("/");
+
+    // Switch to mixed mode
+    await page.getByRole("button", { name: "Mixed Storage Classes" }).click();
+
+    // Fill object count
+    await page.locator("#object-count").fill("1000000");
+
+    // Fill segments
+    const gbInputs = page.locator('input[type="number"][aria-label*="Storage GB"]');
+    await gbInputs.nth(0).fill("10000");
+    await gbInputs.nth(1).fill("5000");
+
+    // Fill remaining inputs
+    await page.locator("#monthly-get-requests").fill("100000");
+    await page.locator("#monthly-retrieval-gb").fill("100");
+    await page.locator("#retention-months").fill("12");
+
+    // Wait for results
+    await expect(
+      page.getByRole("heading", { name: "Recommendation" })
+    ).toBeVisible({ timeout: 10000 });
+
+    // EOZ card should NOT be visible
+    await expect(
+      page.getByText("High-Performance Tier: S3 Express One Zone")
+    ).not.toBeVisible();
+
+    // Performance badge should NOT be visible
+    await expect(
+      page.getByText("Performance", { exact: true })
+    ).not.toBeVisible();
   });
 });
