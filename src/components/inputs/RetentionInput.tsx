@@ -2,6 +2,7 @@
 
 import { useCalculatorStore } from "@/store/calculatorStore";
 import { Input } from "@/components/ui/input";
+import { InfoPopover } from "@/components/ui/InfoPopover";
 
 export function RetentionInput() {
   const retentionMonths = useCalculatorStore(
@@ -13,9 +14,10 @@ export function RetentionInput() {
     <div className="space-y-2">
       <label
         htmlFor="retention-months"
-        className="text-sm font-medium leading-none"
+        className="flex items-center gap-1.5 text-sm font-medium leading-none"
       >
         Expected Retention (Months)
+        <InfoPopover text="How long you expect to keep objects in this bucket before deletion. This affects the minimum duration penalty calculation for IA and Glacier classes." />
       </label>
       <Input
         id="retention-months"

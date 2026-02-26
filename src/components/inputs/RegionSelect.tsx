@@ -20,6 +20,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import { InfoPopover } from "@/components/ui/InfoPopover";
 
 export function RegionSelect() {
   const region = useCalculatorStore((s) => s.inputs.region);
@@ -30,9 +31,10 @@ export function RegionSelect() {
     <div className="space-y-2">
       <label
         htmlFor="region-select"
-        className="text-sm font-medium leading-none"
+        className="flex items-center gap-1.5 text-sm font-medium leading-none"
       >
         AWS Region
+        <InfoPopover text="The AWS region where this bucket is located. Storage rates vary by up to 2 times between regions." />
       </label>
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>

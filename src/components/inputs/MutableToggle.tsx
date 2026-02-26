@@ -2,6 +2,7 @@
 
 import { useCalculatorStore } from "@/store/calculatorStore";
 import { cn } from "@/lib/utils";
+import { InfoPopover } from "@/components/ui/InfoPopover";
 
 export function MutableToggle() {
   const isMutable = useCalculatorStore((s) => s.inputs.isMutable);
@@ -9,8 +10,9 @@ export function MutableToggle() {
 
   return (
     <div className="space-y-2">
-      <span className="text-sm font-medium leading-none">
+      <span className="flex items-center gap-1.5 text-sm font-medium leading-none">
         Is Data Mutable?
+        <InfoPopover text="Whether objects in this bucket are regularly overwritten or replaced. Mutable data triggers minimum duration penalty charges every time an object is updated in IA or Glacier classes." />
       </span>
       <div
         className="flex gap-2"

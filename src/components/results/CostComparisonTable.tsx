@@ -11,6 +11,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { Badge } from "@/components/ui/badge";
+import { InfoPopover } from "@/components/ui/InfoPopover";
 
 interface CostComparisonTableProps {
   output: CalculatorOutput;
@@ -25,8 +26,9 @@ export function CostComparisonTable({ output }: CostComparisonTableProps) {
   return (
     <Card>
       <CardContent className="p-6">
-        <h2 className="text-xl font-semibold text-foreground mb-4">
+        <h2 className="flex items-center gap-1.5 text-xl font-semibold text-foreground mb-4">
           Cost Comparison
+          <InfoPopover text="Total monthly cost for each storage class modeled against your inputs. Storage, requests, retrieval, and monitoring costs are shown separately so you can see where the differences come from." />
         </h2>
         <div className="overflow-x-auto -mx-6 px-6">
           <table className="w-full text-sm" role="table">

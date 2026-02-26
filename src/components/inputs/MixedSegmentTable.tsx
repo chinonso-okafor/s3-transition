@@ -12,6 +12,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { InfoPopover } from "@/components/ui/InfoPopover";
 
 const MIXED_SELECTABLE_CLASSES = [
   StorageClass.STANDARD,
@@ -50,8 +51,9 @@ export function MixedSegmentTable() {
 
   return (
     <div className="space-y-3">
-      <h3 className="text-xs font-semibold uppercase tracking-wider text-[#6b7280]">
+      <h3 className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-[#6b7280]">
         Storage Class Distribution
+        <InfoPopover text="The GB of data currently stored in each storage class within this bucket. Distribute your total storage across each class as shown in S3 Storage Lens or your cost tooling." />
       </h3>
       <div className="space-y-2">
         {mixedSegments.map((segment) => {

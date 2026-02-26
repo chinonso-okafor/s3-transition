@@ -6,6 +6,7 @@ import { STORAGE_CLASS_LABELS } from "@/lib/pricing";
 import { formatCurrency } from "@/lib/utils";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { InfoPopover } from "@/components/ui/InfoPopover";
 import {
   LineChart,
   Line,
@@ -67,8 +68,9 @@ export function BreakevenChart({ output }: BreakevenChartProps) {
   return (
     <Card>
       <CardContent className="p-6">
-        <h2 className="text-xl font-semibold text-foreground mb-4">
+        <h2 className="flex items-center gap-1.5 text-xl font-semibold text-foreground mb-4">
           Break-Even Analysis
+          <InfoPopover text="The point where cumulative savings from the new class exceed the one-time transition cost. A flatter line means a faster payback." />
         </h2>
         <div className="h-[300px] w-full">
           <ResponsiveContainer width="100%" height="100%">
@@ -156,7 +158,10 @@ export function BreakevenChart({ output }: BreakevenChartProps) {
         <div className="flex flex-wrap gap-4 mt-4 text-sm">
           {recommendation.breakEvenMonths !== null && (
             <div className="flex items-center gap-2">
-              <span className="text-[#6b7280]">Pays back in</span>
+              <span className="flex items-center gap-1.5 text-[#6b7280]">
+                Pays back in
+                <InfoPopover text="How many months until cumulative savings from transitioning to the recommended class exceed the one-time transition cost." />
+              </span>
               <Badge variant="outline" className="font-semibold tabular-nums">
                 {recommendation.breakEvenMonths.toFixed(1)} months
               </Badge>
@@ -169,7 +174,10 @@ export function BreakevenChart({ output }: BreakevenChartProps) {
           )}
           {recommendation.roi12Month !== null && (
             <div className="flex items-center gap-2">
-              <span className="text-[#6b7280]">12-month ROI:</span>
+              <span className="flex items-center gap-1.5 text-[#6b7280]">
+                12-month ROI:
+                <InfoPopover text="The net saving over one year after deducting the transition cost. A positive number means the transition pays off within the year." />
+              </span>
               <Badge
                 variant="outline"
                 className={

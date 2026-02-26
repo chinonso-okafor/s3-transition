@@ -665,3 +665,118 @@ test.describe("Mixed mode: EOZ card suppressed", () => {
     ).not.toBeVisible();
   });
 });
+
+// ---------------------------------------------------------------------------
+// Test 15: Learn tab — clicking Learn tab switches content
+// ---------------------------------------------------------------------------
+test.describe("Learn tab: clicking Learn tab switches content", () => {
+  test("click the Learn tab button replaces calculator with Learn content", async ({
+    page,
+  }) => {
+    await page.goto("/");
+
+    // Click the Learn tab
+    await page.getByRole("button", { name: "Learn" }).click();
+
+    // Calculator layout should be gone
+    await expect(
+      page.getByText("Enter your workload details to see recommendations")
+    ).not.toBeVisible();
+
+    // Learn tab content should be visible with FAQ accordion
+    await expect(
+      page.getByText("Frequently Asked Questions")
+    ).toBeVisible();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Test 16: Learn tab — clicking Calculator tab returns to calculator
+// ---------------------------------------------------------------------------
+test.describe("Learn tab: clicking Calculator tab returns to calculator", () => {
+  test("click Learn then click Calculator restores calculator layout", async ({
+    page,
+  }) => {
+    await page.goto("/");
+
+    // Switch to Learn
+    await page.getByRole("button", { name: "Learn" }).click();
+    await expect(
+      page.getByText("Frequently Asked Questions")
+    ).toBeVisible();
+
+    // Switch back to Calculator
+    await page.getByRole("button", { name: "Calculator" }).click();
+
+    // Input panel should be visible again
+    await expect(
+      page.getByRole("complementary")
+    ).toBeVisible();
+
+    // Learn tab content should be gone
+    await expect(
+      page.getByText("Frequently Asked Questions")
+    ).not.toBeVisible();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Test 17: Learn tab — FAQ accordion expands on click
+// ---------------------------------------------------------------------------
+test.describe("Learn tab: FAQ accordion expands on click", () => {
+  test("click first FAQ question makes answer visible", async ({
+    page,
+  }) => {
+    await page.goto("/");
+
+    // Switch to Learn tab
+    await page.getByRole("button", { name: "Learn" }).click();
+    await expect(
+      page.getByText("Frequently Asked Questions")
+    ).toBeVisible();
+
+    // Click the first FAQ question
+    await page
+      .getByRole("button", {
+        name: /Why does this tool sometimes recommend staying in Standard/,
+      })
+      .click();
+
+    // Answer text should become visible
+    await expect(
+      page.getByText("Storage price per GB is only one part of the total cost", {
+        exact: false,
+      })
+    ).toBeVisible();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Test 18: Tooltip — hovering info icon shows popover
+// ---------------------------------------------------------------------------
+test.describe("Tooltip: hovering info icon shows popover", () => {
+  test("hover over the info icon next to Storage GB label shows popover", async ({
+    page,
+  }) => {
+    await page.goto("/");
+
+    // Find the info icon near the Storage GB label
+    const storageLabel = page.locator("label", {
+      has: page.getByText("Total Storage (GB)"),
+    });
+    const infoIcon = storageLabel.locator("svg");
+
+    // Hover over the icon
+    await infoIcon.hover();
+
+    // Wait for the 200ms delay + rendering
+    await page.waitForTimeout(300);
+
+    // Popover should appear with the correct tooltip text
+    await expect(
+      page.getByRole("tooltip")
+    ).toContainText(
+      "The total volume of data currently stored in this bucket"
+    );
+  });
+});

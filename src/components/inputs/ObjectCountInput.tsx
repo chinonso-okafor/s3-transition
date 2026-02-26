@@ -3,6 +3,7 @@
 import { useCalculatorStore } from "@/store/calculatorStore";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { InfoPopover } from "@/components/ui/InfoPopover";
 import { calcAvgObjectSizeKB } from "@/lib/calculator";
 
 function formatSize(kb: number): string {
@@ -25,9 +26,10 @@ export function ObjectCountInput() {
     <div className="space-y-2">
       <label
         htmlFor="object-count"
-        className="text-sm font-medium leading-none"
+        className="flex items-center gap-1.5 text-sm font-medium leading-none"
       >
         Object Count
+        <InfoPopover text="The number of individual objects stored in this bucket. Object count affects minimum billing thresholds, Intelligent-Tiering monitoring fees, and transition costs." />
       </label>
       <Input
         id="object-count"
@@ -42,7 +44,10 @@ export function ObjectCountInput() {
         aria-label="Total number of objects"
       />
       <div className="flex items-center gap-2">
-        <p className="text-xs text-muted-foreground">Total number of objects</p>
+        <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+          Average Object Size
+          <InfoPopover text="Calculated from your storage volume and object count. Objects below 128 KB are billed as 128 KB in IA and Glacier classes, which can significantly inflate your effective cost." />
+        </span>
         {avgObjectSizeKB !== null && (
           <Badge
             variant={avgObjectSizeKB < 128 ? "destructive" : "secondary"}

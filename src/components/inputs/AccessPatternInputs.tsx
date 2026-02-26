@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useCalculatorStore } from "@/store/calculatorStore";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { InfoPopover } from "@/components/ui/InfoPopover";
 
 export function AccessPatternInputs() {
   const monthlyGetRequests = useCalculatorStore(
@@ -59,9 +60,10 @@ export function AccessPatternInputs() {
       <div className="space-y-2">
         <label
           htmlFor="monthly-get-requests"
-          className="text-sm font-medium leading-none"
+          className="flex items-center gap-1.5 text-sm font-medium leading-none"
         >
           Monthly GET Requests
+          <InfoPopover text="The number of times objects in this bucket are read per month. Find this in AWS CloudWatch under the GetRequests metric for your bucket." />
         </label>
         <Input
           id="monthly-get-requests"
@@ -85,9 +87,10 @@ export function AccessPatternInputs() {
       <div className="space-y-2">
         <label
           htmlFor="monthly-retrieval-gb"
-          className="text-sm font-medium leading-none"
+          className="flex items-center gap-1.5 text-sm font-medium leading-none"
         >
           Monthly Retrieval (GB)
+          <InfoPopover text="The total volume of data downloaded from this bucket each month. This drives retrieval costs in IA and Glacier classes and is the most commonly missing input in cost optimization analyses." />
         </label>
         <Input
           id="monthly-retrieval-gb"

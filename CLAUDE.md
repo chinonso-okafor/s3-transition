@@ -173,7 +173,7 @@ Muted background:      #f9fafb
 ---
 
 ## Phase Discipline
-This project is built in 7 sequential phases:
+This project is built in 9 sequential phases:
 
 | Phase | Name | Status |
 |-------|------|--------|
@@ -181,9 +181,11 @@ This project is built in 7 sequential phases:
 | 2 | Calculator Engine & Unit Tests | Complete |
 | 3 | Input Panel UI | Complete |
 | 4 | Results Panel UI | Complete |
-| 5 | Layout Integration & Visual Polish | Current |
-| 6 | E2E Testing & Bug Fixes | Pending |
-| 7 | Vercel Deployment & Beta Prep | Pending |
+| 5 | Layout Integration & Visual Polish | Complete |
+| 6 | E2E Testing & Bug Fixes | Complete |
+| 7 | Vercel Deployment & Beta Prep | Complete |
+| 8 | Mixed Bucket Support | Complete |
+| 9 | Learn Tab, FAQ and Inline Tooltips | Complete |
 
 - Complete and validate one phase fully before starting the next
 - Each phase has a validation checklist in the Build Specification document —
@@ -206,3 +208,7 @@ This project is built in 7 sequential phases:
 - `/components/inputs/` — RegionSelect, StorageInput, ObjectCountInput,
   AccessPatternInputs, ConfidenceSelector, RetentionInput,
   MutableToggle, GlacierTierSelect
+- `/components/ui/InfoPopover.tsx` — shared tooltip popover used across all input and result labels
+- `/components/learn/LearnTab.tsx` — Learn tab content with pricing explainer and FAQ
+- `/components/learn/FaqAccordion.tsx` — accordion component for FAQ section
+- `/components/layout/TabStrip.tsx` — Calculator / Learn tab navigation strip

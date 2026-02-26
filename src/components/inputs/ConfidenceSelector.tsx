@@ -3,6 +3,7 @@
 import { AccessPatternConfidence } from "@/types";
 import { useCalculatorStore } from "@/store/calculatorStore";
 import { cn } from "@/lib/utils";
+import { InfoPopover } from "@/components/ui/InfoPopover";
 
 const CONFIDENCE_OPTIONS: {
   value: AccessPatternConfidence;
@@ -34,8 +35,9 @@ export function ConfidenceSelector() {
 
   return (
     <div className="space-y-2">
-      <span className="text-sm font-medium leading-none">
+      <span className="flex items-center gap-1.5 text-sm font-medium leading-none">
         Access Pattern Confidence
+        <InfoPopover text="How confident you are in the accuracy of your access pattern inputs. Low confidence produces a more conservative Intelligent-Tiering cost estimate." />
       </span>
       <div
         className="grid grid-cols-3 gap-2"

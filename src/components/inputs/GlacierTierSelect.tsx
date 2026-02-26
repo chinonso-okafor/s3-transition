@@ -9,6 +9,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { InfoPopover } from "@/components/ui/InfoPopover";
 
 const TIER_OPTIONS: {
   value: GlacierRetrievalTier;
@@ -42,9 +43,10 @@ export function GlacierTierSelect() {
     <div className="space-y-2">
       <label
         htmlFor="glacier-tier"
-        className="text-sm font-medium leading-none"
+        className="flex items-center gap-1.5 text-sm font-medium leading-none"
       >
         Glacier Retrieval Tier
+        <InfoPopover text="The speed tier used when restoring objects from Glacier Flexible Retrieval or Deep Archive. Faster tiers cost more per GB. Bulk retrieval is free but takes up to 12 hours." />
       </label>
       <Select
         value={glacierRetrievalTier}

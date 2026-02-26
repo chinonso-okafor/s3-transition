@@ -21,6 +21,7 @@ import { MutableToggle } from "@/components/inputs/MutableToggle";
 import { GlacierTierSelect } from "@/components/inputs/GlacierTierSelect";
 import { MixedSegmentTable } from "@/components/inputs/MixedSegmentTable";
 import { Button } from "@/components/ui/button";
+import { InfoPopover } from "@/components/ui/InfoPopover";
 
 const SINGLE_MODE_CLASSES = [
   StorageClass.EXPRESS_ONE_ZONE,
@@ -139,9 +140,10 @@ export function InputPanel() {
                 <div className="space-y-2">
                   <label
                     htmlFor="current-class"
-                    className="text-sm font-medium leading-none text-foreground"
+                    className="flex items-center gap-1.5 text-sm font-medium leading-none text-foreground"
                   >
                     Current Storage Class
+                    <InfoPopover text="The storage class your objects are currently in. If your bucket contains objects in multiple classes, select Mixed Storage Classes at the top of the panel." />
                   </label>
                   <Select
                     value={currentClass}
@@ -225,9 +227,10 @@ export function InputPanel() {
                 <div>
                   <label
                     htmlFor="it-archive-tiers"
-                    className="text-sm font-medium leading-none text-foreground"
+                    className="flex items-center gap-1.5 text-sm font-medium leading-none text-foreground"
                   >
                     Archive Access tiers enabled
+                    <InfoPopover text="Whether your Intelligent-Tiering bucket has the optional Archive Access and Deep Archive Access tiers activated. These reduce storage costs further but require asynchronous restore requests." />
                   </label>
                   <p className="text-xs text-muted-foreground mt-1">
                     Enable if your IT bucket is configured with optional Archive

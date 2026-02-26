@@ -8,6 +8,7 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import { Badge } from "@/components/ui/badge";
+import { InfoPopover } from "@/components/ui/InfoPopover";
 
 interface WarningsPanelProps {
   output: CalculatorOutput;
@@ -31,8 +32,9 @@ export function WarningsPanel({ output }: WarningsPanelProps) {
       <Collapsible open={isOpen} onOpenChange={setIsOpen}>
         <CollapsibleTrigger className="flex w-full items-center justify-between px-6 py-4">
           <div className="flex items-center gap-2">
-            <h2 className="text-base font-semibold text-foreground">
+            <h2 className="flex items-center gap-1.5 text-base font-semibold text-foreground">
               Warnings & Caveats
+              <InfoPopover text="Specific conditions in your workload that could affect recommendation accuracy. Review all warnings before making a transition decision." />
             </h2>
             <Badge className="bg-amber-100 text-amber-800 border-0">
               {combinedWarnings.length}

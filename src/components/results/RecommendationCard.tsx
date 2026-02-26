@@ -5,6 +5,7 @@ import { STORAGE_CLASS_LABELS } from "@/lib/pricing";
 import { formatCurrency } from "@/lib/utils";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { InfoPopover } from "@/components/ui/InfoPopover";
 
 interface RecommendationCardProps {
   output: CalculatorOutput;
@@ -18,8 +19,9 @@ export function RecommendationCard({ output }: RecommendationCardProps) {
       <Card className="border-l-4 border-l-[#dc2626]">
         <CardContent className="p-6">
           <div className="flex items-center justify-between mb-3">
-            <h2 className="text-xl font-semibold text-foreground">
+            <h2 className="flex items-center gap-1.5 text-xl font-semibold text-foreground">
               Recommendation
+              <InfoPopover text="The storage class with the lowest total cost of ownership for your workload, after modeling storage, request, retrieval, and monitoring costs together." />
             </h2>
             <Badge className="bg-red-100 text-red-800 border-0">Stay</Badge>
           </div>
@@ -78,12 +80,16 @@ export function RecommendationCard({ output }: RecommendationCardProps) {
     <Card className={`border-l-4 ${borderColor}`}>
       <CardContent className="p-6">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-xl font-semibold text-foreground">
+          <h2 className="flex items-center gap-1.5 text-xl font-semibold text-foreground">
             Recommendation
+            <InfoPopover text="The storage class with the lowest total cost of ownership for your workload, after modeling storage, request, retrieval, and monitoring costs together." />
           </h2>
-          <Badge className={confidenceBadge.className}>
-            {confidenceBadge.label}
-          </Badge>
+          <span className="flex items-center gap-1.5">
+            <InfoPopover text="Reflects both your stated confidence level and the quality of the inputs provided. Low confidence means the recommendation is directionally correct but should be validated with measured data." />
+            <Badge className={confidenceBadge.className}>
+              {confidenceBadge.label}
+            </Badge>
+          </span>
         </div>
         <div className="mb-1 text-base font-semibold text-foreground">
           {STORAGE_CLASS_LABELS[recommendation.storageClass]}
@@ -94,8 +100,9 @@ export function RecommendationCard({ output }: RecommendationCardProps) {
           >
             {formatCurrency(recommendation.monthlySavings)}
           </span>
-          <span className="text-sm text-[#6b7280]">
+          <span className="flex items-center gap-1.5 text-sm text-[#6b7280]">
             /mo savings ({savingsPercentValue}%)
+            <InfoPopover text="The difference between your current total monthly cost and the projected cost in the recommended class." />
           </span>
         </div>
         <p className="text-sm text-[#6b7280]">{rationale}</p>

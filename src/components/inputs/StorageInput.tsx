@@ -2,6 +2,7 @@
 
 import { useCalculatorStore } from "@/store/calculatorStore";
 import { Input } from "@/components/ui/input";
+import { InfoPopover } from "@/components/ui/InfoPopover";
 
 export function StorageInput() {
   const storageGB = useCalculatorStore((s) => s.inputs.storageGB);
@@ -11,9 +12,10 @@ export function StorageInput() {
     <div className="space-y-2">
       <label
         htmlFor="storage-gb"
-        className="text-sm font-medium leading-none"
+        className="flex items-center gap-1.5 text-sm font-medium leading-none"
       >
         Total Storage (GB)
+        <InfoPopover text="The total volume of data currently stored in this bucket, in gigabytes. Include all object versions if versioning is enabled." />
       </label>
       <Input
         id="storage-gb"
