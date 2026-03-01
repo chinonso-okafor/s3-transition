@@ -77,6 +77,8 @@ export interface CalculatorInputs {
   accessPatternConfidence: AccessPatternConfidence;
   glacierRetrievalTier: GlacierRetrievalTier;
   itArchiveTiersEnabled: boolean;
+  requiresImmediateAccess: boolean;
+  monthlyDataTransferOutGB: number;
   bucketMode: BucketMode;
   mixedSegments: MixedSegment[];
 }
@@ -88,6 +90,7 @@ export interface StorageClassResult {
     requests: number;
     retrieval: number;
     monitoring: number;
+    dataTransfer: number;
     total: number;
   };
   transitionCost: number;

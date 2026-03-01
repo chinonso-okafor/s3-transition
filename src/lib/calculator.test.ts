@@ -13,6 +13,7 @@ import {
   calculate,
 } from "./calculator";
 import { StorageClass, AWSRegion, CalculatorInputs } from "@/types";
+import { calculateTieredStandardStorageCost } from "./pricing";
 
 // --- Worked example from spec ---
 const workedExample: CalculatorInputs = {
@@ -27,6 +28,8 @@ const workedExample: CalculatorInputs = {
   accessPatternConfidence: "low",
   glacierRetrievalTier: "standard",
   itArchiveTiersEnabled: false,
+  requiresImmediateAccess: true,
+  monthlyDataTransferOutGB: 0,
   bucketMode: "single",
   mixedSegments: [],
 };
@@ -92,11 +95,13 @@ describe("Derived Values", () => {
 describe("Monthly TCO - Worked Example", () => {
   const avgObjSize = calcAvgObjectSizeKB(78_765, 89_897_665);
 
-  it("Standard monthly TCO ~$1,813.60", () => {
+  it("Standard monthly TCO with tiered pricing", () => {
     const tco = calcMonthlyTCO(StorageClass.STANDARD, workedExample, avgObjSize);
-    expect(tco.storage).toBeCloseTo(1811.6, -1);
+    // 78,765 GB: tier 1 = 51200 * 0.023 = 1177.60, tier 2 = (78765 - 51200) * 0.022 = 606.43
+    // Total storage = 1784.03
+    expect(tco.storage).toBeCloseTo(1784.03, 0);
     expect(tco.retrieval).toBeCloseTo(0, 0);
-    expect(pctDiff(tco.total, 1813.6)).toBeLessThan(5);
+    expect(tco.total).toBeCloseTo(1786.03, -1);
   });
 
   it("Standard-IA monthly TCO ~$990.56", () => {
@@ -200,12 +205,13 @@ describe("Full Calculator - Worked Example", () => {
     expect(output.derivedValues.smallObjectPenaltyActive).toBe(false);
   });
 
-  it("Standard TCO matches spec within 5%", () => {
+  it("Standard TCO with tiered pricing within 5% of expected", () => {
     const output = calculate(workedExample);
     const std = output.results.find(
       (r) => r.storageClass === StorageClass.STANDARD
     )!;
-    expect(pctDiff(std.monthlyCost.total, 1813.6)).toBeLessThan(5);
+    // With tiered pricing: storage ~$1784.03 + requests ~$2.00 = ~$1786.03
+    expect(pctDiff(std.monthlyCost.total, 1786.03)).toBeLessThan(5);
   });
 
   it("Standard-IA has positive savings vs Standard", () => {
@@ -215,7 +221,8 @@ describe("Full Calculator - Worked Example", () => {
     )!;
     // Storage: $984.56, Retrieval: $5.00, GET requests: $5.00 → ~$994.56
     expect(pctDiff(ia.monthlyCost.total, 994.56)).toBeLessThan(5);
-    expect(ia.monthlySavings).toBeGreaterThan(800);
+    // With tiered Standard pricing, Standard cost is lower (~$1786), so savings are smaller
+    expect(ia.monthlySavings).toBeGreaterThan(700);
     expect(ia.breakEvenMonths).not.toBeNull();
     expect(ia.breakEvenMonths!).toBeLessThan(5);
   });
@@ -233,7 +240,7 @@ describe("Full Calculator - Worked Example", () => {
   it("recommends a class cheaper than Standard", () => {
     const output = calculate(workedExample);
     expect(output.recommendation).not.toBeNull();
-    expect(output.recommendation!.monthlyCost.total).toBeLessThan(1813.6);
+    expect(output.recommendation!.monthlyCost.total).toBeLessThan(1786.1);
   });
 });
 
@@ -254,6 +261,8 @@ describe("Small Object Penalty", () => {
     accessPatternConfidence: "medium",
     glacierRetrievalTier: "standard",
     itArchiveTiersEnabled: false,
+    requiresImmediateAccess: true,
+    monthlyDataTransferOutGB: 0,
     bucketMode: "single",
     mixedSegments: [],
   };
@@ -832,6 +841,8 @@ describe("Mixed Bucket", () => {
     accessPatternConfidence: "medium",
     glacierRetrievalTier: "standard",
     itArchiveTiersEnabled: false,
+    requiresImmediateAccess: true,
+    monthlyDataTransferOutGB: 0,
     bucketMode: "mixed",
     mixedSegments: [],
   };
@@ -1074,5 +1085,38 @@ describe("Reduced Redundancy Storage", () => {
         StorageClass.REDUCED_REDUNDANCY
       );
     }
+  });
+});
+
+// ============================================================
+// 20. Tiered Standard Storage Pricing
+// ============================================================
+
+describe("Tiered Standard Storage Pricing", () => {
+  it("below 50 TB uses flat rate", () => {
+    const cost = calculateTieredStandardStorageCost(1_000);
+    expect(cost).toBeCloseTo(23.0, 2); // 1000 * 0.023
+  });
+
+  it("exactly 50 TB boundary", () => {
+    const cost = calculateTieredStandardStorageCost(51_200);
+    expect(cost).toBeCloseTo(1_177.6, 2); // 51200 * 0.023
+  });
+
+  it("100 TB straddles tier 1-2", () => {
+    const cost = calculateTieredStandardStorageCost(102_400);
+    // 50 TB (51200 GB) at $0.023 + remaining 51200 GB at $0.022
+    const expected = 51_200 * 0.023 + (102_400 - 51_200) * 0.022;
+    expect(cost).toBeCloseTo(expected, 2);
+  });
+
+  it("600 TB hits all three tiers", () => {
+    const cost = calculateTieredStandardStorageCost(614_400);
+    // 50 TB at $0.023 + 450 TB at $0.022 + 100 TB at $0.021
+    const tier1 = 51_200 * 0.023;
+    const tier2 = (512_000 - 51_200) * 0.022;
+    const tier3 = (614_400 - 512_000) * 0.021;
+    const expected = tier1 + tier2 + tier3;
+    expect(cost).toBeCloseTo(expected, 2);
   });
 });

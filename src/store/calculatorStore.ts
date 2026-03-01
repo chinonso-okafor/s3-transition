@@ -35,6 +35,8 @@ const defaultInputs: CalculatorInputs = {
   accessPatternConfidence: "medium",
   glacierRetrievalTier: "standard",
   itArchiveTiersEnabled: false,
+  requiresImmediateAccess: true,
+  monthlyDataTransferOutGB: 0,
   bucketMode: "single",
   mixedSegments: [],
 };

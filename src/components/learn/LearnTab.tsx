@@ -33,11 +33,11 @@ const FAQ_ITEMS = [
   },
   {
     question: "How accurate is this tool compared to my actual AWS bill?",
-    answer: "For a typical workload, outputs should be within 5 to 15 percent of actual AWS billing. The main sources of difference are: data transfer costs out to the internet are not modeled, S3 replication costs are not modeled, and pricing is updated periodically but may lag AWS rate changes by a few weeks. The pricing last-verified date is shown in the tool header. For precise validation, compare this tool output against your AWS Cost and Usage Report for the same bucket and month.",
+    answer: "For a typical workload, outputs should be within 5 to 15 percent of actual AWS billing. The main sources of difference are: S3 replication costs are not modeled, EDP discounts are not modeled, and pricing is updated periodically but may lag AWS rate changes by a few weeks. Data transfer out to the internet is now modeled in the Advanced Costs section. The pricing last-verified date is shown in the tool header. For precise validation, compare this tool output against your AWS Cost and Usage Report for the same bucket and month.",
   },
   {
     question: "What does the tool not model?",
-    answer: "Current known limitations include: data transfer costs out to the internet and other AWS regions, S3 replication charges, NAT Gateway fees, S3 Versioning cost impact from accumulating noncurrent versions, incomplete multipart upload storage, S3 Object Lock retention costs, and costs in AWS GovCloud and China regions which have different pricing structures.",
+    answer: "Current known limitations include: EDP (Enterprise Discount Program) agreements, S3 replication charges for cross-region or same-region replication, lifecycle policy modeling for data transitioning through multiple classes over time, NAT Gateway fees, S3 Versioning cost impact from accumulating noncurrent versions, incomplete multipart upload storage, S3 Object Lock retention costs, and costs in AWS GovCloud and China regions. Data transfer out to the internet is now modeled in the Advanced Costs section.",
   },
   {
     question: "Why is S3 Express One Zone shown separately from the other storage classes?",
@@ -70,6 +70,18 @@ const FAQ_ITEMS = [
   {
     question: "How do I find the inputs this tool needs if I only have access to a third-party cost tool?",
     answer: "Storage GB and current storage class are available in most third-party tools including CloudHealth and Cloudability. Object count is usually available at the bucket level. Monthly GET Requests and Monthly Retrieval GB are less commonly surfaced. For retrieval GB specifically, most third-party tools do not expose this because they read from billing data rather than CloudWatch metrics. AWS CloudWatch is the most reliable source for these two inputs.",
+  },
+  {
+    question: "My organization has an EDP discount with AWS. Does this tool account for it?",
+    answer: "Not yet — EDP modeling is on the roadmap. Enterprise Discount Program agreements are private and customer-specific, so the tool cannot know your rate automatically. In the meantime, you can apply your EDP percentage manually: multiply any cost figure shown by (1 - your EDP rate). For example, at 15% EDP, multiply by 0.85. The recommended storage class will not change — EDP applies proportionally across all S3 storage classes, so relative cost differences are unchanged. A future update will add an optional EDP input field to handle this automatically.",
+  },
+  {
+    question: "My application uses CloudFront to serve S3 content. Should I enter data transfer costs?",
+    answer: "No. S3-to-CloudFront data transfer is completely free. Only enter a value in the Data Transfer Out field if your application transfers data from S3 directly to the internet or to another cloud provider, bypassing CloudFront. S3-to-EC2 in the same region and S3-to-Lambda are also free and should not be counted.",
+  },
+  {
+    question: "Some of my S3 workloads could use Glacier Flexible or Deep Archive. Why are they not always recommended?",
+    answer: "By default the tool excludes Glacier Flexible Retrieval and Deep Archive from recommendations because these classes require a restore request before data is accessible — they are not available in real time. If your workload can genuinely tolerate waiting minutes to hours (compliance archives, cold disaster recovery, long-term log retention), turn off the Requires Immediate Access toggle in the Access Patterns section. The tool will then include these classes in the recommendation and show their full savings potential.",
   },
 ];
 

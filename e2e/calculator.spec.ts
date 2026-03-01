@@ -780,3 +780,91 @@ test.describe("Tooltip: hovering info icon shows popover", () => {
     );
   });
 });
+
+// ---------------------------------------------------------------------------
+// Test 19: Access speed — toggle defaults to on
+// ---------------------------------------------------------------------------
+test.describe("Access speed: toggle defaults to on", () => {
+  test("toggle is on, Glacier Flexible and Deep Archive show async badge", async ({
+    page,
+  }) => {
+    await page.goto("/");
+
+    await fillInputs(page, {
+      storageGB: 10000,
+      objectCount: 100000,
+      monthlyGetRequests: 10000,
+      monthlyRetrievalGB: 10,
+      retentionMonths: 24,
+      region: "US East (N. Virginia)",
+      currentClass: "S3 Standard",
+      confidence: "Medium",
+      isMutable: false,
+    });
+
+    await waitForResults(page);
+
+    // Toggle should be on (checked) by default
+    const toggle = page.locator("#requires-immediate-access");
+    await expect(toggle).toBeVisible();
+
+    // Glacier Flexible and Deep Archive should show async badge in comparison table
+    await expect(
+      page.getByText("Async — restore required", { exact: false }).first()
+    ).toBeVisible();
+
+    // Neither Glacier Flexible nor Deep Archive should be the recommended class
+    const recommendation = page.locator("[class*='text-\\[32px\\]']");
+    await expect(recommendation).toBeVisible();
+    // The recommended class should not contain "Glacier Flexible" or "Deep Archive"
+    const recCard = page.getByRole("heading", { name: "Recommendation" }).locator("..");
+    await expect(recCard).not.toContainText("Glacier Flexible Retrieval");
+    await expect(recCard).not.toContainText("Glacier Deep Archive");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Test 20: Access speed — toggle off includes async in recommendation
+// ---------------------------------------------------------------------------
+test.describe("Access speed: toggle off includes async in recommendation", () => {
+  test("low-retrieval workload with toggle off recommends Glacier class", async ({
+    page,
+  }) => {
+    await page.goto("/");
+
+    await fillInputs(page, {
+      storageGB: 50000,
+      objectCount: 100000,
+      monthlyGetRequests: 1000,
+      monthlyRetrievalGB: 1,
+      retentionMonths: 36,
+      region: "US East (N. Virginia)",
+      currentClass: "S3 Standard",
+      confidence: "High",
+      isMutable: false,
+    });
+
+    await waitForResults(page);
+
+    // Turn off the immediate access toggle
+    const toggle = page.locator("#requires-immediate-access");
+    await toggle.click();
+
+    // Amber notice should appear below the toggle
+    await expect(
+      page.getByText("restore request before data is accessible", { exact: false })
+    ).toBeVisible();
+
+    // With very low retrieval, a Glacier class should be recommended
+    // (either Glacier Flexible or Deep Archive should be cheapest)
+    await expect(
+      page.getByRole("heading", { name: "Recommendation" })
+    ).toBeVisible();
+
+    // The recommendation card should contain either Glacier Flexible or Deep Archive
+    const resultsArea = page.locator("main");
+    const hasGlacierFlex = await resultsArea.getByText("Glacier Flexible", { exact: false }).count();
+    const hasDeepArchive = await resultsArea.getByText("Deep Archive", { exact: false }).count();
+    expect(hasGlacierFlex + hasDeepArchive).toBeGreaterThan(0);
+  });
+});

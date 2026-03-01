@@ -18,6 +18,8 @@ import {
   DEEP_ARCHIVE_RETRIEVAL_COSTS,
   REGIONAL_MULTIPLIERS,
   EOZ_REGIONS,
+  calculateTieredStandardStorageCost,
+  calculateDataTransferOutCost,
 } from "@/lib/pricing";
 
 // --- Derived Values ---
@@ -202,6 +204,7 @@ export function calcMonthlyTCO(
   requests: number;
   retrieval: number;
   monitoring: number;
+  dataTransfer: number;
   total: number;
 } {
   const pricing = PRICING[storageClass];
@@ -228,7 +231,9 @@ export function calcMonthlyTCO(
     storageRate = pricing.storagePerGB;
   }
 
-  const storageCost = billedGB * storageRate;
+  const storageCost = storageClass === StorageClass.STANDARD
+    ? calculateTieredStandardStorageCost(billedGB)
+    : billedGB * storageRate;
 
   const requestCost =
     (inputs.monthlyGetRequests / 1000) * pricing.getPer1K;
@@ -260,15 +265,18 @@ export function calcMonthlyTCO(
     uploadCost = inputs.storageGB * EOZ_PRICING.uploadPerGB;
   }
 
+  const dataTransferCost = calculateDataTransferOutCost(inputs.monthlyDataTransferOutGB ?? 0);
+
   const total =
     (storageCost + requestCost + retrievalCost + monitoringCost + uploadCost) *
-    regionalMultiplier;
+    regionalMultiplier + dataTransferCost;
 
   return {
     storage: storageCost * regionalMultiplier,
     requests: (requestCost + uploadCost) * regionalMultiplier,
     retrieval: retrievalCost * regionalMultiplier,
     monitoring: monitoringCost * regionalMultiplier,
+    dataTransfer: dataTransferCost,
     total,
   };
 }
@@ -624,11 +632,18 @@ export function calculate(inputs: CalculatorInputs): CalculatorOutput {
   // Sort by monthly TCO ascending
   results.sort((a, b) => a.monthlyCost.total - b.monthlyCost.total);
 
-  // Find recommendation: cheapest class that isn't the current class and has positive savings
+  // Async classes excluded from recommendation when immediate access required
+  const asyncClasses = [StorageClass.GLACIER_FLEXIBLE, StorageClass.GLACIER_DEEP_ARCHIVE];
+  const eligibleForRecommendation = (sc: StorageClass) =>
+    inputs.requiresImmediateAccess ? !asyncClasses.includes(sc) : true;
+
+  // Find recommendation: cheapest eligible class that isn't the current class and has positive savings
   const recommendation =
     results.find(
       (r) =>
-        r.storageClass !== inputs.currentClass && r.monthlySavings > 0
+        r.storageClass !== inputs.currentClass &&
+        r.monthlySavings > 0 &&
+        eligibleForRecommendation(r.storageClass)
     ) ?? null;
 
   if (recommendation) {
@@ -832,6 +847,9 @@ export function calculateMixedBucketTCO(
         seg.storageGB,
         inputs.itArchiveTiersEnabled
       );
+    } else if (seg.storageClass === StorageClass.STANDARD) {
+      totalStorageCost += calculateTieredStandardStorageCost(billedGB) * regionalMultiplier;
+      continue;
     } else {
       storageRate = PRICING[seg.storageClass].storagePerGB;
     }
@@ -945,9 +963,14 @@ export function calculateMixedBucketTCO(
   // Sort by monthly TCO ascending
   results.sort((a, b) => a.monthlyCost.total - b.monthlyCost.total);
 
-  // Find recommendation: cheapest class with positive savings
+  // Async classes excluded from recommendation when immediate access required
+  const asyncClassesMixed = [StorageClass.GLACIER_FLEXIBLE, StorageClass.GLACIER_DEEP_ARCHIVE];
+  const eligibleForRecommendationMixed = (sc: StorageClass) =>
+    inputs.requiresImmediateAccess ? !asyncClassesMixed.includes(sc) : true;
+
+  // Find recommendation: cheapest eligible class with positive savings
   const recommendation =
-    results.find((r) => r.monthlySavings > 0) ?? null;
+    results.find((r) => r.monthlySavings > 0 && eligibleForRecommendationMixed(r.storageClass)) ?? null;
 
   if (recommendation) {
     recommendation.isRecommended = true;

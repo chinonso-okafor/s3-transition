@@ -173,7 +173,7 @@ Muted background:      #f9fafb
 ---
 
 ## Phase Discipline
-This project is built in 9 sequential phases:
+This project is built in 10 sequential phases:
 
 | Phase | Name | Status |
 |-------|------|--------|
@@ -186,6 +186,7 @@ This project is built in 9 sequential phases:
 | 7 | Vercel Deployment & Beta Prep | Complete |
 | 8 | Mixed Bucket Support | Complete |
 | 9 | Learn Tab, FAQ and Inline Tooltips | Complete |
+| 10 | Tiered Pricing, Access Speed, Data Transfer, EDP Disclaimer, Tooltip Fix | Complete |
 
 - Complete and validate one phase fully before starting the next
 - Each phase has a validation checklist in the Build Specification document —

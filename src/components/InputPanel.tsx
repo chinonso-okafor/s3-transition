@@ -1,5 +1,7 @@
 "use client";
 
+import { useState } from "react";
+import { ChevronDown } from "lucide-react";
 import { StorageClass } from "@/types";
 import { STORAGE_CLASS_LABELS, EOZ_REGIONS } from "@/lib/pricing";
 import { useCalculatorStore } from "@/store/calculatorStore";
@@ -11,6 +13,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 import { RegionSelect } from "@/components/inputs/RegionSelect";
 import { StorageInput } from "@/components/inputs/StorageInput";
 import { ObjectCountInput } from "@/components/inputs/ObjectCountInput";
@@ -36,11 +39,18 @@ const SINGLE_MODE_CLASSES = [
 ];
 
 export function InputPanel() {
+  const [advancedOpen, setAdvancedOpen] = useState(false);
   const currentClass = useCalculatorStore((s) => s.inputs.currentClass);
   const region = useCalculatorStore((s) => s.inputs.region);
   const bucketMode = useCalculatorStore((s) => s.inputs.bucketMode);
   const itArchiveTiersEnabled = useCalculatorStore(
     (s) => s.inputs.itArchiveTiersEnabled
+  );
+  const requiresImmediateAccess = useCalculatorStore(
+    (s) => s.inputs.requiresImmediateAccess
+  );
+  const monthlyDataTransferOutGB = useCalculatorStore(
+    (s) => s.inputs.monthlyDataTransferOutGB
   );
   const setInput = useCalculatorStore((s) => s.setInput);
   const setBucketMode = useCalculatorStore((s) => s.setBucketMode);
@@ -126,6 +136,45 @@ export function InputPanel() {
           <div className="space-y-4">
             <AccessPatternInputs />
             <ConfidenceSelector />
+
+            {/* Access Speed Toggle */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between gap-3">
+                <label
+                  htmlFor="requires-immediate-access"
+                  className="flex items-center gap-1.5 text-sm font-medium leading-none text-foreground"
+                >
+                  {requiresImmediateAccess
+                    ? "Immediate access required"
+                    : "Async access acceptable"}
+                  <InfoPopover text="Whether your application requires data to be available immediately without a restore wait. If yes, Glacier Flexible Retrieval and Deep Archive are excluded from recommendations but still shown in the comparison table for reference. Turn this off for compliance archives, cold DR storage, or long-term log retention where async access is acceptable." />
+                </label>
+                <Switch
+                  id="requires-immediate-access"
+                  checked={requiresImmediateAccess}
+                  onCheckedChange={(checked) =>
+                    setInput("requiresImmediateAccess", checked)
+                  }
+                  aria-label="Requires immediate access"
+                />
+              </div>
+              <p className="text-xs text-muted-foreground">
+                {requiresImmediateAccess
+                  ? "Glacier Flexible and Deep Archive excluded from recommendations"
+                  : "All storage classes included in comparison"}
+              </p>
+              {!requiresImmediateAccess && (
+                <div className="rounded-lg border border-[#fde68a] bg-[#fffbeb] px-4 py-3 border-l-4 border-l-[#d97706]">
+                  <p className="text-sm text-[#92400e]">
+                    Glacier Flexible Retrieval and Glacier Deep Archive require a
+                    restore request before data is accessible — data is not
+                    available in real time. Confirm your application can tolerate
+                    retrieval delays of minutes to hours before acting on any
+                    recommendation involving these classes.
+                  </p>
+                </div>
+              )}
+            </div>
           </div>
         </section>
 
@@ -274,6 +323,55 @@ export function InputPanel() {
             </div>
           </section>
         )}
+
+        {/* Section 7: Advanced Costs (collapsible) */}
+        <section className="px-6 py-5">
+          <button
+            type="button"
+            onClick={() => setAdvancedOpen(!advancedOpen)}
+            className="flex w-full items-center justify-between"
+          >
+            <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              Advanced Costs
+            </h3>
+            <ChevronDown
+              className={`h-4 w-4 text-[#6b7280] transition-transform ${
+                advancedOpen ? "rotate-180" : ""
+              }`}
+            />
+          </button>
+          {advancedOpen && (
+            <div className="mt-4 space-y-2">
+              <label
+                htmlFor="monthly-data-transfer-out"
+                className="flex items-center gap-1.5 text-sm font-medium leading-none text-foreground"
+              >
+                Monthly Data Transfer Out (GB)
+                <InfoPopover text="Data transfer costs apply when data leaves AWS to the internet or another cloud provider. S3-to-CloudFront, S3-to-EC2 (same region), and S3-to-Lambda transfers are all free and should not be counted here." />
+              </label>
+              <input
+                id="monthly-data-transfer-out"
+                type="number"
+                min={0}
+                placeholder="0"
+                value={monthlyDataTransferOutGB || ""}
+                onChange={(e) =>
+                  setInput(
+                    "monthlyDataTransferOutGB",
+                    e.target.value === "" ? 0 : Number(e.target.value)
+                  )
+                }
+                className="flex h-10 w-full rounded-lg border border-border bg-white px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563eb] focus-visible:ring-offset-1"
+                aria-label="Monthly data transfer out in GB"
+              />
+              <p className="text-xs text-[#9ca3af]">
+                Data transferred from S3 directly to the internet. Enter 0 if
+                traffic goes through CloudFront (S3-to-CloudFront is free) or
+                stays within AWS.
+              </p>
+            </div>
+          )}
+        </section>
       </div>
     </aside>
   );

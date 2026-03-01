@@ -1,6 +1,6 @@
 "use client";
 
-import { CalculatorOutput } from "@/types";
+import { StorageClass, CalculatorOutput } from "@/types";
 import { STORAGE_CLASS_LABELS } from "@/lib/pricing";
 import { formatCurrency, cn } from "@/lib/utils";
 import { Card, CardContent } from "@/components/ui/card";
@@ -17,11 +17,25 @@ interface CostComparisonTableProps {
   output: CalculatorOutput;
 }
 
+const ASYNC_CLASSES: StorageClass[] = [
+  StorageClass.GLACIER_FLEXIBLE,
+  StorageClass.GLACIER_DEEP_ARCHIVE,
+];
+
 export function CostComparisonTable({ output }: CostComparisonTableProps) {
   const { results, inputs } = output;
   const currentClassTCO =
     results.find((r) => r.storageClass === inputs.currentClass)?.monthlyCost
       .total ?? 0;
+
+  const showDataTransferColumn = (inputs.monthlyDataTransferOutGB ?? 0) > 0;
+  const showTieredNote =
+    inputs.storageGB > 51200 &&
+    results.some(
+      (r) =>
+        r.storageClass === StorageClass.STANDARD &&
+        (r.storageClass === inputs.currentClass || r.isRecommended)
+    );
 
   return (
     <Card>
@@ -49,6 +63,11 @@ export function CostComparisonTable({ output }: CostComparisonTableProps) {
                 <th className="py-3 px-3 text-left text-xs font-semibold uppercase tracking-wider text-[#6b7280] hidden md:table-cell">
                   Monitoring
                 </th>
+                {showDataTransferColumn && (
+                  <th className="py-3 px-3 text-left text-xs font-semibold uppercase tracking-wider text-[#6b7280] hidden md:table-cell">
+                    Data Transfer
+                  </th>
+                )}
                 <th className="py-3 px-3 text-left text-xs font-semibold uppercase tracking-wider text-[#6b7280]">
                   Total TCO
                 </th>
@@ -63,6 +82,17 @@ export function CostComparisonTable({ output }: CostComparisonTableProps) {
                 const isRecommended = result.isRecommended;
                 const diff = currentClassTCO - result.monthlyCost.total;
                 const isEven = index % 2 === 0;
+                const isAsync = ASYNC_CLASSES.includes(result.storageClass);
+
+                // Blended effective rate for Standard when tiered pricing applies
+                const showBlendedRate =
+                  result.storageClass === StorageClass.STANDARD &&
+                  inputs.storageGB > 51200;
+                const blendedRate = showBlendedRate
+                  ? result.monthlyCost.storage /
+                    output.derivedValues.regionalMultiplier /
+                    inputs.storageGB
+                  : null;
 
                 return (
                   <tr
@@ -78,7 +108,7 @@ export function CostComparisonTable({ output }: CostComparisonTableProps) {
                     )}
                   >
                     <td className="py-3 pr-3">
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 flex-wrap">
                         <span
                           className={cn(
                             isCurrent && "font-bold",
@@ -98,6 +128,11 @@ export function CostComparisonTable({ output }: CostComparisonTableProps) {
                             className="text-[10px] px-1.5 py-0"
                           >
                             Current
+                          </Badge>
+                        )}
+                        {isAsync && inputs.requiresImmediateAccess && (
+                          <Badge className="bg-amber-100 text-amber-800 border-0 text-[10px] px-1.5 py-0">
+                            Async — restore required
                           </Badge>
                         )}
                         {!result.isEligible && result.ineligibleReason && (
@@ -120,7 +155,14 @@ export function CostComparisonTable({ output }: CostComparisonTableProps) {
                       </div>
                     </td>
                     <td className="py-3 px-3 tabular-nums">
-                      {formatCurrency(result.monthlyCost.storage)}
+                      <div>
+                        {formatCurrency(result.monthlyCost.storage)}
+                        {blendedRate !== null && (
+                          <div className="text-[11px] text-[#6b7280]">
+                            avg ${blendedRate.toFixed(3)}/GB
+                          </div>
+                        )}
+                      </div>
                     </td>
                     <td className="py-3 px-3 tabular-nums hidden sm:table-cell">
                       {formatCurrency(result.monthlyCost.requests)}
@@ -133,6 +175,11 @@ export function CostComparisonTable({ output }: CostComparisonTableProps) {
                         ? formatCurrency(result.monthlyCost.monitoring)
                         : "\u2014"}
                     </td>
+                    {showDataTransferColumn && (
+                      <td className="py-3 px-3 tabular-nums hidden md:table-cell">
+                        {formatCurrency(result.monthlyCost.dataTransfer)}
+                      </td>
+                    )}
                     <td className="py-3 px-3 tabular-nums font-medium">
                       {formatCurrency(result.monthlyCost.total)}
                     </td>
@@ -155,6 +202,25 @@ export function CostComparisonTable({ output }: CostComparisonTableProps) {
             </tbody>
           </table>
         </div>
+
+        {/* Tiered pricing note */}
+        {showTieredNote && (
+          <div className="mt-4 rounded-lg border border-[#e5e7eb] bg-[#f9fafb] px-4 py-3 text-sm text-[#374151]">
+            <strong>Tiered pricing applied.</strong> S3 Standard rates step down
+            at 50 TB ($0.022/GB) and 500 TB ($0.021/GB). Billing is calculated at
+            the AWS account level — your actual effective rate depends on total
+            Standard storage across your entire account in this region, not this
+            bucket alone.
+          </div>
+        )}
+
+        {/* Data transfer note */}
+        {showDataTransferColumn && (
+          <p className="mt-2 text-xs text-[#6b7280]">
+            Data Transfer Out is the same across all classes — does not affect
+            recommendation.
+          </p>
+        )}
       </CardContent>
     </Card>
   );

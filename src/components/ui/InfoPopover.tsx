@@ -8,22 +8,39 @@ interface InfoPopoverProps {
 }
 
 export function InfoPopover({ text }: InfoPopoverProps) {
-  const [isVisible, setIsVisible] = useState(false);
-  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [visible, setVisible] = useState(false);
+  const [style, setStyle] = useState<React.CSSProperties>({});
   const iconRef = useRef<HTMLSpanElement>(null);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const handleMouseEnter = useCallback(() => {
     timerRef.current = setTimeout(() => {
-      setIsVisible(true);
+      if (!iconRef.current) return;
+      const rect = iconRef.current.getBoundingClientRect();
+      const popoverWidth = 280;
+      const margin = 12;
+      const viewportWidth = window.innerWidth;
+
+      // Center on icon, then clamp within viewport
+      let left = rect.left + rect.width / 2 - popoverWidth / 2;
+      left = Math.max(margin, Math.min(left, viewportWidth - popoverWidth - margin));
+
+      // Position above icon by default; flip below if near top
+      const spaceAbove = rect.top;
+      const popoverHeight = 120; // approximate
+
+      const top = spaceAbove > popoverHeight + 8
+        ? rect.top - popoverHeight - 8
+        : rect.bottom + 8;
+
+      setStyle({ position: "fixed", left, top, width: popoverWidth });
+      setVisible(true);
     }, 200);
   }, []);
 
   const handleMouseLeave = useCallback(() => {
-    if (timerRef.current) {
-      clearTimeout(timerRef.current);
-      timerRef.current = null;
-    }
-    setIsVisible(false);
+    if (timerRef.current) clearTimeout(timerRef.current);
+    setVisible(false);
   }, []);
 
   return (
@@ -34,14 +51,26 @@ export function InfoPopover({ text }: InfoPopoverProps) {
       onMouseLeave={handleMouseLeave}
     >
       <Info
-        className={`h-3.5 w-3.5 transition-colors duration-100 cursor-help ${
-          isVisible ? "text-[#2563eb]" : "text-[#9ca3af]"
-        }`}
-        aria-hidden="true"
+        size={14}
+        className="transition-colors duration-100"
+        style={{ color: visible ? "#2563EB" : "#9CA3AF", cursor: "default" }}
       />
-      {isVisible && (
+      {visible && (
         <div
-          className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 z-50 w-[280px] rounded-lg border border-[#e5e7eb] bg-white p-3 text-[13px] font-normal leading-relaxed text-[#374151] shadow-[0_4px_12px_rgba(0,0,0,0.08)]"
+          style={{
+            ...style,
+            zIndex: 9999,
+            background: "#fff",
+            border: "1px solid #E5E7EB",
+            borderRadius: 8,
+            padding: 12,
+            boxShadow: "0 4px 12px rgba(0,0,0,0.08)",
+            fontSize: 13,
+            lineHeight: 1.5,
+            color: "#374151",
+            fontFamily: "Inter, sans-serif",
+            pointerEvents: "none",
+          }}
           role="tooltip"
         >
           {text}

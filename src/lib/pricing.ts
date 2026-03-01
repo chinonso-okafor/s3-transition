@@ -258,6 +258,34 @@ export const REGION_LABELS: Record<AWSRegion, string> = {
   [AWSRegion.US_GOV_EAST_1]: "AWS GovCloud (US-East)",
 };
 
+export function calculateTieredStandardStorageCost(storageGB: number): number {
+  const tier1CapGB = 50 * 1024;     // 50 TB
+  const tier2CapGB = 500 * 1024;    // 500 TB
+
+  if (storageGB <= tier1CapGB) {
+    return storageGB * 0.023;
+  } else if (storageGB <= tier2CapGB) {
+    return tier1CapGB * 0.023 + (storageGB - tier1CapGB) * 0.022;
+  } else {
+    return tier1CapGB * 0.023
+      + (tier2CapGB - tier1CapGB) * 0.022
+      + (storageGB - tier2CapGB) * 0.021;
+  }
+}
+
+export function calculateDataTransferOutCost(gb: number): number {
+  if (gb <= 100) return 0;
+  const billable = gb - 100;
+  const t1 = 10 * 1024;    // 10 TB
+  const t2 = 50 * 1024;    // 50 TB
+  const t3 = 150 * 1024;   // 150 TB
+
+  if (billable <= t1) return billable * 0.09;
+  if (billable <= t2) return t1 * 0.09 + (billable - t1) * 0.085;
+  if (billable <= t3) return t1 * 0.09 + (t2 - t1) * 0.085 + (billable - t2) * 0.07;
+  return t1 * 0.09 + (t2 - t1) * 0.085 + (t3 - t2) * 0.07 + (billable - t3) * 0.05;
+}
+
 export type RegionGroup = {
   label: string;
   regions: AWSRegion[];
