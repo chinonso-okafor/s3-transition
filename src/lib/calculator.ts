@@ -457,6 +457,18 @@ function generateWarnings(
     }
   }
 
+  // High object-count warning: transition costs may dominate savings
+  if (inputs.storageGB > 0) {
+    const objectsPerGB = inputs.objectCount / inputs.storageGB;
+    if (objectsPerGB > 10000) {
+      warnings.push(
+        `High object density: ${Math.round(objectsPerGB).toLocaleString()} objects/GB detected. ` +
+        `Lifecycle transition fees are charged per object — verify the transition cost shown ` +
+        `in the break-even analysis before proceeding.`
+      );
+    }
+  }
+
   if (
     storageClass === StorageClass.INTELLIGENT_TIERING &&
     avgObjectSizeKB < 128
@@ -672,6 +684,22 @@ export function calculate(inputs: CalculatorInputs): CalculatorOutput {
       "Data is mutable: frequent overwrites/deletes can trigger minimum duration charges on IA and Glacier classes."
     );
   }
+
+  // High object-count: transition cost dominance check
+  if (recommendation && recommendation.transitionCost > 0 && recommendation.monthlySavings > 0) {
+    const objectsPerGB = inputs.objectCount / inputs.storageGB;
+    const monthsToBreakEven = recommendation.breakEvenMonths;
+
+    if (objectsPerGB > 10000 && monthsToBreakEven !== null && monthsToBreakEven > 6) {
+      globalWarnings.push(
+        `Transition cost dominance: with ${inputs.objectCount.toLocaleString()} objects, ` +
+        `the one-time transition fee ($${recommendation.transitionCost.toFixed(2)}) takes ` +
+        `${monthsToBreakEven.toFixed(1)} months to recover. For high object-count buckets, ` +
+        `consider whether compacting small objects first would reduce transition costs.`
+      );
+    }
+  }
+
   if (inputs.accessPatternConfidence === "low") {
     globalWarnings.push(
       "Low confidence in access pattern data: recommendation may change significantly with actual usage patterns. Consider Intelligent-Tiering for automatic optimization."

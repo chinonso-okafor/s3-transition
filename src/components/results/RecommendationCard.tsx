@@ -76,6 +76,53 @@ export function RecommendationCard({ output }: RecommendationCardProps) {
     rationale = `Transition to ${STORAGE_CLASS_LABELS[recommendation.storageClass]} saves ${formatCurrency(recommendation.monthlySavings)}/mo (${savingsPercentValue}%) with immediate savings — no transition costs.`;
   }
 
+  // Retention vs break-even verdict
+  const retentionMonths = inputs.retentionMonths;
+  const breakEven = recommendation.breakEvenMonths;
+
+  let verdict: { text: string; tone: "positive" | "caution" | "negative" } | null = null;
+
+  if (breakEven !== null && retentionMonths > 0) {
+    if (breakEven === 0) {
+      verdict = {
+        text: "Transition pays back immediately — no break-even period.",
+        tone: "positive",
+      };
+    } else if (retentionMonths >= breakEven * 2) {
+      verdict = {
+        text: `Your ${retentionMonths}-month retention is well beyond the ${breakEven.toFixed(1)}-month break-even — this transition makes strong financial sense.`,
+        tone: "positive",
+      };
+    } else if (retentionMonths >= breakEven) {
+      verdict = {
+        text: `Your ${retentionMonths}-month retention exceeds the ${breakEven.toFixed(1)}-month break-even — transition is financially justified.`,
+        tone: "positive",
+      };
+    } else if (retentionMonths >= breakEven * 0.75) {
+      verdict = {
+        text: `Your ${retentionMonths}-month retention is close to the ${breakEven.toFixed(1)}-month break-even. Transition may not fully pay off.`,
+        tone: "caution",
+      };
+    } else {
+      verdict = {
+        text: `Your ${retentionMonths}-month retention is shorter than the ${breakEven.toFixed(1)}-month break-even — transition costs won't be recovered.`,
+        tone: "negative",
+      };
+    }
+  }
+
+  const verdictStyles = {
+    positive: "text-[#16a34a]",
+    caution: "text-[#d97706]",
+    negative: "text-[#dc2626]",
+  };
+
+  const verdictIcons = {
+    positive: "✓",
+    caution: "⚠",
+    negative: "✗",
+  };
+
   return (
     <Card className={`border-l-4 ${borderColor}`}>
       <CardContent className="p-6">
@@ -105,6 +152,11 @@ export function RecommendationCard({ output }: RecommendationCardProps) {
             <InfoPopover text="The difference between your current total monthly cost and the projected cost in the recommended class." />
           </span>
         </div>
+        {verdict && (
+          <p className={`text-sm mb-2 ${verdictStyles[verdict.tone]}`}>
+            {verdictIcons[verdict.tone]} {verdict.text}
+          </p>
+        )}
         <p className="text-sm text-[#6b7280]">{rationale}</p>
       </CardContent>
     </Card>

@@ -29,6 +29,7 @@ export function CostComparisonTable({ output }: CostComparisonTableProps) {
       .total ?? 0;
 
   const showDataTransferColumn = (inputs.monthlyDataTransferOutGB ?? 0) > 0;
+  const showPenaltyColumn = results.some((r) => r.minDurationPenalty > 0);
   const showTieredNote =
     inputs.storageGB > 51200 &&
     results.some(
@@ -66,6 +67,14 @@ export function CostComparisonTable({ output }: CostComparisonTableProps) {
                 {showDataTransferColumn && (
                   <th className="py-3 px-3 text-left text-xs font-semibold uppercase tracking-wider text-[#6b7280] hidden md:table-cell">
                     Data Transfer
+                  </th>
+                )}
+                {showPenaltyColumn && (
+                  <th className="py-3 px-3 text-left text-xs font-semibold uppercase tracking-wider text-[#6b7280] hidden sm:table-cell">
+                    <span className="flex items-center gap-1">
+                      Penalty
+                      <InfoPopover text="One-time charge for storing objects less than the class minimum duration (30–180 days depending on class). Added to transition cost in break-even calculation." />
+                    </span>
                   </th>
                 )}
                 <th className="py-3 px-3 text-left text-xs font-semibold uppercase tracking-wider text-[#6b7280]">
@@ -178,6 +187,17 @@ export function CostComparisonTable({ output }: CostComparisonTableProps) {
                     {showDataTransferColumn && (
                       <td className="py-3 px-3 tabular-nums hidden md:table-cell">
                         {formatCurrency(result.monthlyCost.dataTransfer)}
+                      </td>
+                    )}
+                    {showPenaltyColumn && (
+                      <td className="py-3 px-3 tabular-nums hidden sm:table-cell">
+                        {result.minDurationPenalty > 0 ? (
+                          <span className="text-[#d97706]">
+                            {formatCurrency(result.minDurationPenalty)}
+                          </span>
+                        ) : (
+                          <span className="text-[#6b7280]">{"\u2014"}</span>
+                        )}
                       </td>
                     )}
                     <td className="py-3 px-3 tabular-nums font-medium">

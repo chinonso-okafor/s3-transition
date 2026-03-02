@@ -64,6 +64,14 @@ const FAQ_ITEMS = [
     answer: "The break-even period is the number of months until your cumulative monthly savings equal the one-time cost of transitioning objects to the new class. A break-even of 3 months means the transition pays for itself in 3 months. A break-even of 18 months means you need to commit to the new class for a year and a half before it is financially justified. Use break-even alongside your expected retention period. If you only plan to keep data for 12 more months, a break-even of 18 months means the transition is not worth making.",
   },
   {
+    question: "Why does transitioning 1 million objects cost more than transitioning 1 TB?",
+    answer: "S3 lifecycle transition costs are charged per object, not per gigabyte. AWS charges a flat fee per 1,000 objects transitioned, regardless of how large or small those objects are.\n\nCurrent lifecycle transition rates:\n• Standard-IA / One Zone-IA: $0.01 per 1,000 objects\n• Glacier Instant Retrieval: $0.02 per 1,000 objects\n• Glacier Flexible Retrieval: $0.03 per 1,000 objects\n• Glacier Deep Archive: $0.05 per 1,000 objects\n\nThis means a bucket with 1 billion small objects (e.g. log files) costs up to $50,000 to transition to Deep Archive — regardless of whether the total data is 10 GB or 10 TB. The calculator models this correctly using your object count input. If you have a high object count relative to your storage volume, check the Warnings section for a transition cost dominance alert.",
+  },
+  {
+    question: "What is the minimum storage duration charge?",
+    answer: "Several S3 storage classes have a minimum billing period. If you delete, overwrite, or transition an object out of the class before this period expires, AWS charges you for the remaining days anyway.\n\nMinimum durations:\n• S3 Standard-IA / One Zone-IA: 30 days\n• S3 Glacier Instant Retrieval: 90 days\n• S3 Glacier Flexible Retrieval: 90 days\n• S3 Glacier Deep Archive: 180 days\n\nExample: storing 1 TB in Glacier Instant for 30 days then deleting it still costs the full 90-day charge. The calculator models this as an \"early deletion penalty\" shown in the break-even analysis when your expected retention is shorter than the class minimum.",
+  },
+  {
     question: "My bucket already has a lifecycle policy. What should I do?",
     answer: "Use the Mixed Storage Classes mode in this tool. Enter the current GB distribution across each class as shown in S3 Storage Lens or your cost tooling. The tool will calculate your true current total cost across all active classes and model what consolidating to a single target class would cost, including retrieval fees that most tools ignore.",
   },
