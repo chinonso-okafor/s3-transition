@@ -44,12 +44,7 @@ export function ResultsPanel() {
 
       {/* EDP Disclaimer */}
       <p className="text-[13px] leading-relaxed text-[#9ca3af]">
-        Cost estimates reflect AWS list prices. Enterprise Discount Program (EDP)
-        agreements are not currently modeled. If your organization has an EDP
-        agreement, apply your discount rate to all figures shown — the recommended
-        storage class remains the same regardless of EDP rate. Lifecycle policy
-        modeling is also not yet available; see the FAQ for guidance on multi-class
-        transition costs.
+        Cost estimates reflect AWS list prices. EDP/PPA are not currently modeled. If your organization has negotiated AWS pricing, apply your discount rate to all figures shown. The recommended storage class remains the same regardless of discount rate. Lifecycle policy modeling is also not yet available; see the FAQ for guidance on multi-class transition costs.
       </p>
 
       <BreakevenChart output={output} />

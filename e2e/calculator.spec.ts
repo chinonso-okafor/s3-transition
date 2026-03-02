@@ -810,7 +810,7 @@ test.describe("Access speed: toggle defaults to on", () => {
 
     // Glacier Flexible and Deep Archive should show async badge in comparison table
     await expect(
-      page.getByText("Async — restore required", { exact: false }).first()
+      page.getByText("Requires restore request", { exact: false }).first()
     ).toBeVisible();
 
     // Neither Glacier Flexible nor Deep Archive should be the recommended class

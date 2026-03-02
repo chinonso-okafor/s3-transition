@@ -132,7 +132,7 @@ export function CostComparisonTable({ output }: CostComparisonTableProps) {
                         )}
                         {isAsync && inputs.requiresImmediateAccess && (
                           <Badge className="bg-amber-100 text-amber-800 border-0 text-[10px] px-1.5 py-0">
-                            Async — restore required
+                            Requires restore request
                           </Badge>
                         )}
                         {!result.isEligible && result.ineligibleReason && (
