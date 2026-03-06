@@ -110,8 +110,13 @@ function calcITBlendedStorageRate(
   accessPatternConfidence: AccessPatternConfidence,
   monthlyGetRequests: number,
   storageGB: number,
-  itArchiveTiersEnabled: boolean
+  itArchiveTiersEnabled: boolean,
+  avgObjectSizeKB: number
 ): number {
+  // Objects below 128 KB never tier — all stay in Frequent Access permanently
+  // IT provides zero storage benefit; return Frequent Access rate
+  if (avgObjectSizeKB < 128) return INTELLIGENT_TIERING_STORAGE_RATES.frequent;
+
   const rates = INTELLIGENT_TIERING_STORAGE_RATES;
 
   if (itArchiveTiersEnabled) {
@@ -219,7 +224,8 @@ export function calcMonthlyTCO(
       inputs.accessPatternConfidence,
       inputs.monthlyGetRequests,
       inputs.storageGB,
-      inputs.itArchiveTiersEnabled
+      inputs.itArchiveTiersEnabled,
+      avgObjectSizeKB
     );
   } else {
     billedGB = getBilledStorageGB(
@@ -311,6 +317,9 @@ export function calcMinDurationPenalty(
   retentionMonths: number,
   monthlyStorageCost: number
 ): number {
+  // 0 means user hasn't set retention — treat as unknown, not "delete immediately"
+  if (retentionMonths === 0) return 0;
+
   const minDurationDays = PRICING[storageClass].minDurationDays;
   if (minDurationDays === 0) return 0;
 
@@ -447,8 +456,14 @@ function generateWarnings(
     );
   }
 
+  if (storageClass === StorageClass.ONE_ZONE_IA) {
+    warnings.push(
+      "Durability risk: One Zone-IA stores data in a single Availability Zone. Unlike other S3 classes, data may be permanently lost if that AZ is destroyed. Not recommended for primary copies of production data or data that cannot be recreated."
+    );
+  }
+
   const minDurationDays = PRICING[storageClass].minDurationDays;
-  if (minDurationDays > 0) {
+  if (minDurationDays > 0 && inputs.retentionMonths > 0) {
     const retentionDays = inputs.retentionMonths * 30.44;
     if (retentionDays < minDurationDays) {
       warnings.push(
@@ -512,7 +527,7 @@ function calcSensitivity(
       monthlyGetRequests: inputs.monthlyGetRequests * multiplier,
     };
 
-    const candidateClasses = getCandidateClasses(inputs.currentClass);
+    const candidateClasses = getCandidateClasses(inputs.currentClass, avgObjectSizeKB);
     let bestClass = inputs.currentClass;
     let bestTCO = calcMonthlyTCO(
       inputs.currentClass,
@@ -541,7 +556,10 @@ function calcSensitivity(
 
 // --- Candidate classes ---
 
-function getCandidateClasses(currentClass: StorageClass): StorageClass[] {
+function getCandidateClasses(
+  currentClass: StorageClass,
+  avgObjectSizeKB: number
+): StorageClass[] {
   // Standard cost-optimization classes (never include EOZ or RRS in ranked list)
   return [
     StorageClass.STANDARD,
@@ -551,7 +569,12 @@ function getCandidateClasses(currentClass: StorageClass): StorageClass[] {
     StorageClass.GLACIER_INSTANT,
     StorageClass.GLACIER_FLEXIBLE,
     StorageClass.GLACIER_DEEP_ARCHIVE,
-  ].filter((sc) => sc !== currentClass);
+  ].filter((sc) => {
+    if (sc === currentClass) return false;
+    // IT provides no benefit for sub-128KB objects — exclude from candidates
+    if (sc === StorageClass.INTELLIGENT_TIERING && avgObjectSizeKB < 128) return false;
+    return true;
+  });
 }
 
 // --- Main Calculator ---
@@ -585,7 +608,7 @@ export function calculate(inputs: CalculatorInputs): CalculatorOutput {
   );
 
   // Calculate all candidate classes
-  const candidateClasses = getCandidateClasses(inputs.currentClass);
+  const candidateClasses = getCandidateClasses(inputs.currentClass, avgObjectSizeKB);
   const results: StorageClassResult[] = [];
 
   // Add current class result
@@ -701,9 +724,15 @@ export function calculate(inputs: CalculatorInputs): CalculatorOutput {
   }
 
   if (inputs.accessPatternConfidence === "low") {
-    globalWarnings.push(
-      "Low confidence in access pattern data: recommendation may change significantly with actual usage patterns. Consider Intelligent-Tiering for automatic optimization."
-    );
+    if (avgObjectSizeKB >= 128) {
+      globalWarnings.push(
+        "Low confidence in access pattern data: recommendation may change significantly with actual usage patterns. Consider Intelligent-Tiering for automatic optimization."
+      );
+    } else {
+      globalWarnings.push(
+        "Low confidence in access pattern data: recommendation may change significantly with actual usage patterns. Objects below 128 KB are not eligible for Intelligent-Tiering auto-tiering."
+      );
+    }
   }
   if (!eozEligible && inputs.currentClass === StorageClass.STANDARD) {
     globalWarnings.push(
@@ -873,7 +902,8 @@ export function calculateMixedBucketTCO(
         inputs.accessPatternConfidence,
         inputs.monthlyGetRequests,
         seg.storageGB,
-        inputs.itArchiveTiersEnabled
+        inputs.itArchiveTiersEnabled,
+        segAvgObjSize
       );
     } else if (seg.storageClass === StorageClass.STANDARD) {
       totalStorageCost += calculateTieredStandardStorageCost(billedGB) * regionalMultiplier;
@@ -940,7 +970,11 @@ export function calculateMixedBucketTCO(
     StorageClass.GLACIER_INSTANT,
     StorageClass.GLACIER_FLEXIBLE,
     StorageClass.GLACIER_DEEP_ARCHIVE,
-  ];
+  ].filter((sc) => {
+    // IT provides no benefit for sub-128KB objects — exclude from candidates
+    if (sc === StorageClass.INTELLIGENT_TIERING && avgObjectSizeKB < 128) return false;
+    return true;
+  });
 
   const results: StorageClassResult[] = [];
 
@@ -1012,9 +1046,9 @@ export function calculateMixedBucketTCO(
   const isITDominant = itStorageGB > totalStorageGB * 0.5;
 
   if (isITDominant) {
-    // Calculate total IT monitoring fee
+    // Calculate total IT monitoring fee — only eligible objects (>= 128 KB) pay monitoring
     const itMonitoringFee =
-      (objectCount / 1000) * 0.0025;
+      (calcITMonitoringEligibleObjects(objectCount, avgObjectSizeKB) / 1000) * 0.0025;
 
     // Calculate estimated tiering saving
     const standardRate = PRICING[StorageClass.STANDARD].storagePerGB;
@@ -1022,7 +1056,8 @@ export function calculateMixedBucketTCO(
       inputs.accessPatternConfidence,
       inputs.monthlyGetRequests,
       itStorageGB,
-      inputs.itArchiveTiersEnabled
+      inputs.itArchiveTiersEnabled,
+      avgObjectSizeKB
     );
     const tieringSaving = (standardRate - itBlendedRate) * itStorageGB * regionalMultiplier;
 
@@ -1089,9 +1124,15 @@ export function calculateMixedBucketTCO(
     );
   }
   if (inputs.accessPatternConfidence === "low") {
-    allWarnings.push(
-      "Low confidence in access pattern data: recommendation may change significantly with actual usage patterns. Consider Intelligent-Tiering for automatic optimization."
-    );
+    if (avgObjectSizeKB >= 128) {
+      allWarnings.push(
+        "Low confidence in access pattern data: recommendation may change significantly with actual usage patterns. Consider Intelligent-Tiering for automatic optimization."
+      );
+    } else {
+      allWarnings.push(
+        "Low confidence in access pattern data: recommendation may change significantly with actual usage patterns. Objects below 128 KB are not eligible for Intelligent-Tiering auto-tiering."
+      );
+    }
   }
 
   // Confidence level

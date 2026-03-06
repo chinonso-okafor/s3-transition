@@ -72,6 +72,10 @@ const FAQ_ITEMS = [
     answer: "Several S3 storage classes have a minimum billing period. If you delete, overwrite, or transition an object out of the class before this period expires, AWS charges you for the remaining days anyway.\n\nMinimum durations:\n• S3 Standard-IA / One Zone-IA: 30 days\n• S3 Glacier Instant Retrieval: 90 days\n• S3 Glacier Flexible Retrieval: 90 days\n• S3 Glacier Deep Archive: 180 days\n\nExample: storing 1 TB in Glacier Instant for 30 days then deleting it still costs the full 90-day charge. The calculator models this as an \"early deletion penalty\" shown in the break-even analysis when your expected retention is shorter than the class minimum.",
   },
   {
+    question: "Why might Glacier retrieval costs be overstated?",
+    answer: "The calculator estimates Glacier retrieval request costs using your monthly GET request count as a proxy. In practice, Glacier workflows use restore requests (which are fewer and less frequent than standard GETs), so actual retrieval costs may be lower than shown. Treat Glacier retrieval cost estimates as a conservative upper bound.",
+  },
+  {
     question: "My bucket already has a lifecycle policy. What should I do?",
     answer: "Use the Mixed Storage Classes mode in this tool. Enter the current GB distribution across each class as shown in S3 Storage Lens or your cost tooling. The tool will calculate your true current total cost across all active classes and model what consolidating to a single target class would cost, including retrieval fees that most tools ignore.",
   },

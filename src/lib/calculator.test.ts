@@ -289,12 +289,13 @@ describe("Small Object Penalty", () => {
     expect(ia.warnings.some((w) => w.includes("Small object penalty"))).toBe(true);
   });
 
-  it("warns about IT zero benefit for small objects", () => {
+  it("excludes IT from candidates for small objects", () => {
     const output = calculate(smallObjInputs);
     const it = output.results.find(
       (r) => r.storageClass === StorageClass.INTELLIGENT_TIERING
-    )!;
-    expect(it.warnings.some((w) => w.includes("zero benefit"))).toBe(true);
+    );
+    // IT should not appear in results for sub-128KB objects
+    expect(it).toBeUndefined();
   });
 });
 
@@ -963,14 +964,14 @@ describe("Mixed Bucket", () => {
       monthlyRetrievalGB: 10,
       accessPatternConfidence: "low",
       mixedSegments: [
-        { id: "1", storageClass: StorageClass.INTELLIGENT_TIERING, storageGB: 2_000 },
+        { id: "1", storageClass: StorageClass.INTELLIGENT_TIERING, storageGB: 30_000 },
         { id: "2", storageClass: StorageClass.STANDARD, storageGB: 100 },
       ],
     };
     const result = calculateMixedBucketTCO(inputs);
     expect(result).not.toBeNull();
-    // 100M objects × 0.0025 / 1000 = $250/mo monitoring fee
-    // IT tiering saving on 2TB with low confidence is much smaller
+    // 100M objects, avg obj ~316 KB (>= 128 KB) → 95% monitoring eligible
+    // monitoring fee ($237.50) exceeds tiering savings ($94.50) at low confidence
     expect(
       result!.warnings.some((w) => w.includes("monitoring fee"))
     ).toBe(true);
