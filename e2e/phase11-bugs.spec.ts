@@ -17,6 +17,12 @@ async function fillInputs(
   await page.locator("#retention-months").fill(String(opts.retentionMonths));
 }
 
+async function setCurrentClass(page: Page, label: string) {
+  const trigger = page.locator("#current-class");
+  await trigger.click();
+  await page.getByRole("option", { name: new RegExp(label, "i") }).click();
+}
+
 test.describe("Phase 11 Bug 1: retention vs break-even verdict", () => {
   test("verdict sentence appears below savings figure", async ({ page }) => {
     await page.goto("/");
@@ -58,6 +64,61 @@ test.describe("Phase 11 Bug 1: retention vs break-even verdict", () => {
 
     expect(foundVerdict).toBe(true);
   });
+
+  test("retention=1, currentClass=Standard-IA → red verdict", async ({ page }) => {
+    await page.goto("/");
+
+    await fillInputs(page, {
+      storageGB: 5000,
+      objectCount: 100000,
+      monthlyGetRequests: 1000,
+      monthlyRetrievalGB: 1,
+      retentionMonths: 1,
+    });
+
+    await setCurrentClass(page, "Standard-IA");
+
+    await expect(
+      page.getByRole("heading", { name: "Recommendation" })
+    ).toBeVisible({ timeout: 15000 });
+
+    // At retention=1 month, the recommended class (Glacier Instant, 90-day minimum)
+    // should produce a red verdict because retention is below min duration.
+    const verdictEl = page.locator("text=shorter than");
+    await expect(verdictEl).toBeVisible({ timeout: 5000 });
+
+    // Verify red color (text-[#dc2626])
+    const verdictP = page.locator("p").filter({ hasText: "shorter than" });
+    const color = await verdictP.evaluate((el) => getComputedStyle(el).color);
+    expect(color).toBe("rgb(220, 38, 38)");
+  });
+
+  test("retention=12, currentClass=Standard-IA → green verdict", async ({ page }) => {
+    await page.goto("/");
+
+    await fillInputs(page, {
+      storageGB: 5000,
+      objectCount: 100000,
+      monthlyGetRequests: 1000,
+      monthlyRetrievalGB: 1,
+      retentionMonths: 12,
+    });
+
+    await setCurrentClass(page, "Standard-IA");
+
+    await expect(
+      page.getByRole("heading", { name: "Recommendation" })
+    ).toBeVisible({ timeout: 15000 });
+
+    // At retention=12 months, well beyond 90-day minimum → green verdict.
+    const verdictEl = page.locator("text=well beyond");
+    await expect(verdictEl).toBeVisible({ timeout: 5000 });
+
+    // Verify green color (text-[#16a34a])
+    const verdictP = page.locator("p").filter({ hasText: "well beyond" });
+    const color = await verdictP.evaluate((el) => getComputedStyle(el).color);
+    expect(color).toBe("rgb(22, 163, 74)");
+  });
 });
 
 test.describe("Phase 11 Bug 2: penalty column values at retention=12", () => {
@@ -82,7 +143,10 @@ test.describe("Phase 11 Bug 2: penalty column values at retention=12", () => {
     await expect(penaltyHeader).not.toBeVisible();
   });
 
-  test("penalty column updates to dashes when retention changes from 3 to 12", async ({ page }) => {
+  test("penalty column updates to dashes when retention changes from 3 to 12", async ({ page, isMobile }) => {
+    // Penalty column header uses `hidden sm:table-cell` — only visible on desktop
+    test.skip(!!isMobile, "Penalty column header hidden on mobile");
+
     await page.goto("/");
 
     // First set retention to 3 (should show penalties for some classes)
