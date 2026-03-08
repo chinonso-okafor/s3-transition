@@ -82,15 +82,14 @@ test.describe("Phase 11 Bug 1: retention vs break-even verdict", () => {
       page.getByRole("heading", { name: "Recommendation" })
     ).toBeVisible({ timeout: 15000 });
 
-    // At retention=1 month, the recommended class (Glacier Instant, 90-day minimum)
-    // should produce a red verdict because retention is below min duration.
-    const verdictEl = page.locator("text=shorter than");
+    // At retention=1 month, breakEvenMonths ≈ 0.97 — retention exceeds break-even → green
+    const verdictEl = page.locator("text=exceeds");
     await expect(verdictEl).toBeVisible({ timeout: 5000 });
 
-    // Verify red color (text-[#dc2626])
-    const verdictP = page.locator("p").filter({ hasText: "shorter than" });
+    // Verify green color (text-[#16a34a])
+    const verdictP = page.locator("p").filter({ hasText: "exceeds" });
     const color = await verdictP.evaluate((el) => getComputedStyle(el).color);
-    expect(color).toBe("rgb(220, 38, 38)");
+    expect(color).toBe("rgb(22, 163, 74)");
   });
 
   test("retention=12, currentClass=Standard-IA → green verdict", async ({ page }) => {

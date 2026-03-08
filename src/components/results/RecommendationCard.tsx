@@ -1,7 +1,7 @@
 "use client";
 
 import { CalculatorOutput } from "@/types";
-import { STORAGE_CLASS_LABELS, PRICING } from "@/lib/pricing";
+import { STORAGE_CLASS_LABELS } from "@/lib/pricing";
 import { formatCurrency } from "@/lib/utils";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -77,16 +77,8 @@ export function RecommendationCard({ output }: RecommendationCardProps) {
   }
 
   // Retention vs break-even verdict
-  // Use the greater of financial break-even and minimum storage duration so
-  // the verdict correctly warns when retention is below the class minimum.
   const retentionMonths = inputs.retentionMonths;
-  const rawBreakEven = recommendation.breakEvenMonths;
-  const minDurationMonths =
-    PRICING[recommendation.storageClass].minDurationDays / 30.44;
-  const breakEven =
-    rawBreakEven !== null
-      ? Math.max(rawBreakEven, minDurationMonths)
-      : null;
+  const breakEven = recommendation.breakEvenMonths;
 
   let verdict: { text: string; tone: "positive" | "caution" | "negative" } | null = null;
 
