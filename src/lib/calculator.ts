@@ -244,13 +244,26 @@ export function calcMonthlyTCO(
   const requestCost =
     (inputs.monthlyGetRequests / 1000) * pricing.getPer1K;
 
+  const putRequestCost =
+    (inputs.monthlyPutRequests / 1000) * pricing.putPer1K;
+
   const retrievalPerGB = getRetrievalCostPerGB(
     storageClass,
     inputs.glacierRetrievalTier
   );
+
+  const isGlacierAsync =
+    storageClass === StorageClass.GLACIER_FLEXIBLE ||
+    storageClass === StorageClass.GLACIER_DEEP_ARCHIVE;
+
+  const restoreRequestCount =
+    isGlacierAsync && inputs.monthlyRestoreRequests > 0
+      ? inputs.monthlyRestoreRequests
+      : inputs.monthlyGetRequests;
+
   const retrievalRequestCost =
     getRetrievalRequestCostPer1K(storageClass, inputs.glacierRetrievalTier) > 0
-      ? (inputs.monthlyGetRequests / 1000) *
+      ? (restoreRequestCount / 1000) *
         getRetrievalRequestCostPer1K(storageClass, inputs.glacierRetrievalTier)
       : 0;
   const retrievalCost =
@@ -274,12 +287,12 @@ export function calcMonthlyTCO(
   const dataTransferCost = calculateDataTransferOutCost(inputs.monthlyDataTransferOutGB ?? 0);
 
   const total =
-    (storageCost + requestCost + retrievalCost + monitoringCost + uploadCost) *
+    (storageCost + requestCost + putRequestCost + retrievalCost + monitoringCost + uploadCost) *
     regionalMultiplier + dataTransferCost;
 
   return {
     storage: storageCost * regionalMultiplier,
-    requests: (requestCost + uploadCost) * regionalMultiplier,
+    requests: (requestCost + putRequestCost + uploadCost) * regionalMultiplier,
     retrieval: retrievalCost * regionalMultiplier,
     monitoring: monitoringCost * regionalMultiplier,
     dataTransfer: dataTransferCost,

@@ -78,6 +78,8 @@ export interface CalculatorInputs {
   glacierRetrievalTier: GlacierRetrievalTier;
   itArchiveTiersEnabled: boolean;
   requiresImmediateAccess: boolean;
+  monthlyPutRequests: number;
+  monthlyRestoreRequests: number;
   monthlyDataTransferOutGB: number;
   bucketMode: BucketMode;
   mixedSegments: MixedSegment[];

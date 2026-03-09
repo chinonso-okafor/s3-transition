@@ -29,6 +29,8 @@ const workedExample: CalculatorInputs = {
   glacierRetrievalTier: "standard",
   itArchiveTiersEnabled: false,
   requiresImmediateAccess: true,
+  monthlyPutRequests: 0,
+  monthlyRestoreRequests: 0,
   monthlyDataTransferOutGB: 0,
   bucketMode: "single",
   mixedSegments: [],
@@ -262,6 +264,8 @@ describe("Small Object Penalty", () => {
     glacierRetrievalTier: "standard",
     itArchiveTiersEnabled: false,
     requiresImmediateAccess: true,
+    monthlyPutRequests: 0,
+    monthlyRestoreRequests: 0,
     monthlyDataTransferOutGB: 0,
     bucketMode: "single",
     mixedSegments: [],
@@ -843,6 +847,8 @@ describe("Mixed Bucket", () => {
     glacierRetrievalTier: "standard",
     itArchiveTiersEnabled: false,
     requiresImmediateAccess: true,
+    monthlyPutRequests: 0,
+    monthlyRestoreRequests: 0,
     monthlyDataTransferOutGB: 0,
     bucketMode: "mixed",
     mixedSegments: [],
@@ -1119,5 +1125,137 @@ describe("Tiered Standard Storage Pricing", () => {
     const tier3 = (614_400 - 512_000) * 0.021;
     const expected = tier1 + tier2 + tier3;
     expect(cost).toBeCloseTo(expected, 2);
+  });
+});
+
+// ============================================================
+// 21. PUT Request Costs
+// ============================================================
+
+describe("PUT Request Costs", () => {
+  const avgObj = calcAvgObjectSizeKB(854.87, 1_000_000);
+
+  it("PUT requests increase Standard TCO correctly", () => {
+    const baseInputs: CalculatorInputs = {
+      ...workedExample,
+      storageGB: 854.87,
+      objectCount: 1_000_000,
+      monthlyGetRequests: 100_000,
+      monthlyRetrievalGB: 10,
+      monthlyPutRequests: 1_399_416,
+    };
+    const withPut = calcMonthlyTCO(StorageClass.STANDARD, baseInputs, avgObj);
+    const noPutInputs: CalculatorInputs = { ...baseInputs, monthlyPutRequests: 0 };
+    const withoutPut = calcMonthlyTCO(StorageClass.STANDARD, noPutInputs, avgObj);
+    // PUT cost = 1,399,416 / 1000 × $0.005 = ~$7.00
+    const putDelta = withPut.total - withoutPut.total;
+    expect(putDelta).toBeCloseTo(7.0, 0);
+  });
+
+  it("Standard-IA PUT costs 2× Standard PUT for same request count", () => {
+    const putInputs: CalculatorInputs = {
+      ...workedExample,
+      monthlyPutRequests: 1_000_000,
+    };
+    const stdTCO = calcMonthlyTCO(StorageClass.STANDARD, putInputs, 918.7);
+    const iaTCO = calcMonthlyTCO(StorageClass.STANDARD_IA, putInputs, 918.7);
+    // Standard PUT: 1M/1K × $0.005 = $5.00
+    // IA PUT: 1M/1K × $0.01 = $10.00
+    const stdNoPut = calcMonthlyTCO(StorageClass.STANDARD, { ...putInputs, monthlyPutRequests: 0 }, 918.7);
+    const iaNoPut = calcMonthlyTCO(StorageClass.STANDARD_IA, { ...putInputs, monthlyPutRequests: 0 }, 918.7);
+    const stdPutCost = stdTCO.requests - stdNoPut.requests;
+    const iaPutCost = iaTCO.requests - iaNoPut.requests;
+    expect(iaPutCost / stdPutCost).toBeCloseTo(2.0, 1);
+  });
+
+  it("Glacier Deep Archive PUT costs 10× Standard PUT", () => {
+    const putInputs: CalculatorInputs = {
+      ...workedExample,
+      monthlyPutRequests: 1_000_000,
+    };
+    const stdNoPut = calcMonthlyTCO(StorageClass.STANDARD, { ...putInputs, monthlyPutRequests: 0 }, 918.7);
+    const stdTCO = calcMonthlyTCO(StorageClass.STANDARD, putInputs, 918.7);
+    const daNoPut = calcMonthlyTCO(StorageClass.GLACIER_DEEP_ARCHIVE, { ...putInputs, monthlyPutRequests: 0 }, 918.7);
+    const daTCO = calcMonthlyTCO(StorageClass.GLACIER_DEEP_ARCHIVE, putInputs, 918.7);
+    const stdPutCost = stdTCO.requests - stdNoPut.requests;
+    const daPutCost = daTCO.requests - daNoPut.requests;
+    expect(daPutCost / stdPutCost).toBeCloseTo(10.0, 1);
+  });
+
+  it("zero PUT requests leaves TCO unchanged", () => {
+    const zeroPut = calcMonthlyTCO(StorageClass.STANDARD, workedExample, 918.7);
+    const explicitZero: CalculatorInputs = { ...workedExample, monthlyPutRequests: 0 };
+    const explicit = calcMonthlyTCO(StorageClass.STANDARD, explicitZero, 918.7);
+    expect(zeroPut.total).toBe(explicit.total);
+  });
+});
+
+// ============================================================
+// 22. Glacier Restore Requests
+// ============================================================
+
+describe("Glacier Restore Requests", () => {
+  const avgObj = calcAvgObjectSizeKB(78_765, 89_897_665);
+
+  it("uses restore request count instead of GET count for Glacier Flexible", () => {
+    const withRestore: CalculatorInputs = {
+      ...workedExample,
+      monthlyRestoreRequests: 500,
+      glacierRetrievalTier: "standard",
+    };
+    const withoutRestore: CalculatorInputs = {
+      ...workedExample,
+      monthlyRestoreRequests: 0,
+      glacierRetrievalTier: "standard",
+    };
+    const tcoWith = calcMonthlyTCO(StorageClass.GLACIER_FLEXIBLE, withRestore, avgObj);
+    const tcoWithout = calcMonthlyTCO(StorageClass.GLACIER_FLEXIBLE, withoutRestore, avgObj);
+    // With 500 restore requests vs 5M GET proxy, retrieval request cost should be much lower
+    expect(tcoWith.retrieval).toBeLessThan(tcoWithout.retrieval);
+  });
+
+  it("uses restore request count instead of GET count for Deep Archive", () => {
+    // Deep Archive doesn't have per-request costs in our model (only Glacier Flexible does),
+    // but verify the field is accepted without error
+    const withRestore: CalculatorInputs = {
+      ...workedExample,
+      monthlyRestoreRequests: 500,
+    };
+    const tco = calcMonthlyTCO(StorageClass.GLACIER_DEEP_ARCHIVE, withRestore, avgObj);
+    expect(tco.total).toBeGreaterThan(0);
+  });
+
+  it("falls back to GET count when monthlyRestoreRequests is 0", () => {
+    const fallback: CalculatorInputs = {
+      ...workedExample,
+      monthlyRestoreRequests: 0,
+    };
+    const baseline = calcMonthlyTCO(StorageClass.GLACIER_FLEXIBLE, workedExample, avgObj);
+    const withFallback = calcMonthlyTCO(StorageClass.GLACIER_FLEXIBLE, fallback, avgObj);
+    expect(withFallback.retrieval).toBe(baseline.retrieval);
+  });
+
+  it("does not affect non-Glacier classes", () => {
+    const withRestore: CalculatorInputs = {
+      ...workedExample,
+      monthlyRestoreRequests: 500,
+    };
+    const stdWith = calcMonthlyTCO(StorageClass.STANDARD, withRestore, avgObj);
+    const stdWithout = calcMonthlyTCO(StorageClass.STANDARD, workedExample, avgObj);
+    expect(stdWith.total).toBe(stdWithout.total);
+  });
+
+  it("500 restore requests reduces retrieval cost vs 5M GET proxy on Glacier Flexible", () => {
+    const withRestore: CalculatorInputs = {
+      ...workedExample,
+      monthlyRestoreRequests: 500,
+      glacierRetrievalTier: "standard",
+    };
+    const tco = calcMonthlyTCO(StorageClass.GLACIER_FLEXIBLE, withRestore, avgObj);
+    // Restore request cost: 500/1000 × $0.0004 = $0.0002
+    // vs GET proxy: 5,000,000/1000 × $0.0004 = $2.00
+    // Retrieval GB cost is same: 500 × $0.01 = $5.00
+    // So total retrieval should be ~$5.00 (not ~$7.00 with GET proxy)
+    expect(tco.retrieval).toBeCloseTo(5.0, 0);
   });
 });

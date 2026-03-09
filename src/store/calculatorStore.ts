@@ -36,6 +36,8 @@ const defaultInputs: CalculatorInputs = {
   glacierRetrievalTier: "standard",
   itArchiveTiersEnabled: false,
   requiresImmediateAccess: true,
+  monthlyPutRequests: 0,
+  monthlyRestoreRequests: 0,
   monthlyDataTransferOutGB: 0,
   bucketMode: "single",
   mixedSegments: [],

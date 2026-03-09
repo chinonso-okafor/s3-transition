@@ -10,6 +10,9 @@ export function AccessPatternInputs() {
   const monthlyGetRequests = useCalculatorStore(
     (s) => s.inputs.monthlyGetRequests
   );
+  const monthlyPutRequests = useCalculatorStore(
+    (s) => s.inputs.monthlyPutRequests
+  );
   const monthlyRetrievalGB = useCalculatorStore(
     (s) => s.inputs.monthlyRetrievalGB
   );
@@ -82,6 +85,35 @@ export function AccessPatternInputs() {
         />
         <p className="text-xs text-muted-foreground">
           Total GET requests across all objects per month
+        </p>
+      </div>
+      <div className="space-y-2">
+        <label
+          htmlFor="monthly-put-requests"
+          className="flex items-center gap-1.5 text-sm font-medium leading-none"
+        >
+          Monthly PUT Requests
+          <InfoPopover text="Write-side request costs. Each storage class charges differently for PUT operations — IA and Glacier classes cost 2–10× more per write than Standard. Leaving this blank assumes zero write activity." />
+        </label>
+        <Input
+          id="monthly-put-requests"
+          type="number"
+          min={0}
+          step={1000}
+          placeholder="e.g. 1000000"
+          value={monthlyPutRequests || ""}
+          onChange={(e) =>
+            setInput(
+              "monthlyPutRequests",
+              parseInt(e.target.value, 10) || 0
+            )
+          }
+          aria-label="Monthly PUT requests"
+        />
+        <p className="text-xs text-muted-foreground">
+          Total PUT, COPY, POST, and LIST requests per month. Find this in AWS
+          Console → S3 → your bucket → Metrics → Request metrics → PUT
+          requests. Or from your billing export under Requests-Tier1.
         </p>
       </div>
       <div className="space-y-2">

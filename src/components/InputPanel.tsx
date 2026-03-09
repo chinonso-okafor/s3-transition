@@ -22,6 +22,7 @@ import { ConfidenceSelector } from "@/components/inputs/ConfidenceSelector";
 import { RetentionInput } from "@/components/inputs/RetentionInput";
 import { MutableToggle } from "@/components/inputs/MutableToggle";
 import { GlacierTierSelect } from "@/components/inputs/GlacierTierSelect";
+import { GlacierRestoreRequestsInput } from "@/components/inputs/GlacierRestoreRequestsInput";
 import { MixedSegmentTable } from "@/components/inputs/MixedSegmentTable";
 import { Button } from "@/components/ui/button";
 import { InfoPopover } from "@/components/ui/InfoPopover";
@@ -261,6 +262,11 @@ export function InputPanel() {
             </h3>
             <div className="space-y-4">
               <GlacierTierSelect />
+              {(currentClass === StorageClass.GLACIER_FLEXIBLE ||
+                currentClass === StorageClass.GLACIER_DEEP_ARCHIVE ||
+                !requiresImmediateAccess) && (
+                <GlacierRestoreRequestsInput />
+              )}
             </div>
           </section>
         )}
