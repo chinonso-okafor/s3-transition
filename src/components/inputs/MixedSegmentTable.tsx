@@ -13,6 +13,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { InfoPopover } from "@/components/ui/InfoPopover";
+import { parseFloatFromInput } from "@/lib/utils";
 
 const MIXED_SELECTABLE_CLASSES = [
   StorageClass.STANDARD,
@@ -92,14 +93,13 @@ export function MixedSegmentTable() {
               </div>
               <div className="w-28 shrink-0">
                 <Input
-                  type="number"
-                  min={0}
-                  step={1}
+                  type="text"
+                  inputMode="decimal"
                   placeholder="0"
                   value={segment.storageGB || ""}
                   onChange={(e) =>
                     updateMixedSegment(segment.id, {
-                      storageGB: parseFloat(e.target.value) || 0,
+                      storageGB: parseFloatFromInput(e.target.value),
                     })
                   }
                   aria-label={`Storage GB for segment ${segment.id}`}

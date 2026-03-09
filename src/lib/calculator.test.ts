@@ -556,14 +556,14 @@ describe("Glacier Retrieval Tiers", () => {
     expect(tco.retrieval).toBeCloseTo(0, 1);
   });
 
-  it("Deep Archive standard retrieval = $0.02/GB", () => {
+  it("Deep Archive standard retrieval = $0.02/GB + request cost", () => {
     const tco = calcMonthlyTCO(
       StorageClass.GLACIER_DEEP_ARCHIVE,
       workedExample,
       avgObj
     );
-    // 500 GB × $0.02 = $10
-    expect(tco.retrieval).toBeCloseTo(10, 0);
+    // 500 GB × $0.02 = $10 + 5M/1000 × $0.0004 = $2 = $12
+    expect(tco.retrieval).toBeCloseTo(12, 0);
   });
 
   it("Deep Archive bulk retrieval = $0.0025/GB", () => {

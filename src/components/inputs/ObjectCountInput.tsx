@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { InfoPopover } from "@/components/ui/InfoPopover";
 import { calcAvgObjectSizeKB } from "@/lib/calculator";
+import { parseIntFromInput } from "@/lib/utils";
 
 function formatSize(kb: number): string {
   if (kb >= 1_048_576) return `${(kb / 1_048_576).toFixed(1)} GB`;
@@ -33,13 +34,12 @@ export function ObjectCountInput() {
       </label>
       <Input
         id="object-count"
-        type="number"
-        min={0}
-        step={1}
+        type="text"
+        inputMode="numeric"
         placeholder="e.g. 1000000"
         value={objectCount || ""}
         onChange={(e) =>
-          setInput("objectCount", parseInt(e.target.value, 10) || 0)
+          setInput("objectCount", parseIntFromInput(e.target.value))
         }
         aria-label="Total number of objects"
       />

@@ -156,10 +156,10 @@ export const GLACIER_RETRIEVAL_COSTS: Record<
 
 export const DEEP_ARCHIVE_RETRIEVAL_COSTS: Record<
   "standard" | "bulk",
-  { perGB: number }
+  { perGB: number; per1KRequests: number }
 > = {
-  standard: { perGB: 0.02 },
-  bulk: { perGB: 0.0025 },
+  standard: { perGB: 0.02, per1KRequests: 0.0004 },
+  bulk: { perGB: 0.0025, per1KRequests: 0.0 },
 };
 
 export const REGIONAL_MULTIPLIERS: Record<AWSRegion, number> = {

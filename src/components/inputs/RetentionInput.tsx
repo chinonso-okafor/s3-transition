@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useCalculatorStore } from "@/store/calculatorStore";
 import { Input } from "@/components/ui/input";
 import { InfoPopover } from "@/components/ui/InfoPopover";
+import { parseIntFromInput } from "@/lib/utils";
 
 export function RetentionInput() {
   const retentionMonths = useCalculatorStore(
@@ -25,15 +26,14 @@ export function RetentionInput() {
       </label>
       <Input
         id="retention-months"
-        type="number"
-        min={0}
-        step={1}
+        type="text"
+        inputMode="numeric"
         placeholder="e.g. 12"
         value={rawValue}
         onChange={(e) => {
           const val = e.target.value;
           setRawValue(val);
-          setInput("retentionMonths", val === "" ? 0 : parseInt(val, 10) || 0);
+          setInput("retentionMonths", val === "" ? 0 : parseIntFromInput(val));
         }}
         aria-label="Expected data retention period in months"
       />

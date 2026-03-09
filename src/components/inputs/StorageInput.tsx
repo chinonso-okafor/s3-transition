@@ -3,6 +3,7 @@
 import { useCalculatorStore } from "@/store/calculatorStore";
 import { Input } from "@/components/ui/input";
 import { InfoPopover } from "@/components/ui/InfoPopover";
+import { parseFloatFromInput } from "@/lib/utils";
 
 export function StorageInput() {
   const storageGB = useCalculatorStore((s) => s.inputs.storageGB);
@@ -19,13 +20,12 @@ export function StorageInput() {
       </label>
       <Input
         id="storage-gb"
-        type="number"
-        min={0}
-        step={1}
+        type="text"
+        inputMode="decimal"
         placeholder="e.g. 10000"
         value={storageGB || ""}
         onChange={(e) =>
-          setInput("storageGB", parseFloat(e.target.value) || 0)
+          setInput("storageGB", parseFloatFromInput(e.target.value))
         }
         aria-label="Total storage in gigabytes"
       />

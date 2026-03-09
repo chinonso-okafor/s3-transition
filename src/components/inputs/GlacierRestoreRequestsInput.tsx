@@ -3,6 +3,7 @@
 import { useCalculatorStore } from "@/store/calculatorStore";
 import { Input } from "@/components/ui/input";
 import { InfoPopover } from "@/components/ui/InfoPopover";
+import { parseIntFromInput } from "@/lib/utils";
 
 export function GlacierRestoreRequestsInput() {
   const monthlyRestoreRequests = useCalculatorStore(
@@ -21,15 +22,14 @@ export function GlacierRestoreRequestsInput() {
       </label>
       <Input
         id="monthly-restore-requests"
-        type="number"
-        min={0}
-        step={100}
+        type="text"
+        inputMode="numeric"
         placeholder="e.g. 500"
         value={monthlyRestoreRequests || ""}
         onChange={(e) =>
           setInput(
             "monthlyRestoreRequests",
-            parseInt(e.target.value, 10) || 0
+            parseIntFromInput(e.target.value)
           )
         }
         aria-label="Monthly Glacier restore requests"

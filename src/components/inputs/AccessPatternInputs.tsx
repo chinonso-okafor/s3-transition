@@ -5,6 +5,7 @@ import { useCalculatorStore } from "@/store/calculatorStore";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { InfoPopover } from "@/components/ui/InfoPopover";
+import { parseIntFromInput, parseFloatFromInput } from "@/lib/utils";
 
 export function AccessPatternInputs() {
   const monthlyGetRequests = useCalculatorStore(
@@ -70,15 +71,14 @@ export function AccessPatternInputs() {
         </label>
         <Input
           id="monthly-get-requests"
-          type="number"
-          min={0}
-          step={1000}
+          type="text"
+          inputMode="numeric"
           placeholder="e.g. 5000000"
           value={monthlyGetRequests || ""}
           onChange={(e) =>
             setInput(
               "monthlyGetRequests",
-              parseInt(e.target.value, 10) || 0
+              parseIntFromInput(e.target.value)
             )
           }
           aria-label="Monthly GET requests"
@@ -97,15 +97,14 @@ export function AccessPatternInputs() {
         </label>
         <Input
           id="monthly-put-requests"
-          type="number"
-          min={0}
-          step={1000}
+          type="text"
+          inputMode="numeric"
           placeholder="e.g. 1000000"
           value={monthlyPutRequests || ""}
           onChange={(e) =>
             setInput(
               "monthlyPutRequests",
-              parseInt(e.target.value, 10) || 0
+              parseIntFromInput(e.target.value)
             )
           }
           aria-label="Monthly PUT requests"
@@ -126,15 +125,14 @@ export function AccessPatternInputs() {
         </label>
         <Input
           id="monthly-retrieval-gb"
-          type="number"
-          min={0}
-          step={1}
+          type="text"
+          inputMode="decimal"
           placeholder="e.g. 500"
           value={monthlyRetrievalGB || ""}
           onChange={(e) =>
             setInput(
               "monthlyRetrievalGB",
-              parseFloat(e.target.value) || 0
+              parseFloatFromInput(e.target.value)
             )
           }
           aria-label="Monthly data retrieval in gigabytes"
@@ -167,13 +165,12 @@ export function AccessPatternInputs() {
               </label>
               <Input
                 id="est-read-requests"
-                type="number"
-                min={0}
-                step={1000}
+                type="text"
+                inputMode="numeric"
                 placeholder="e.g. 5000000"
                 value={estRequests || ""}
                 onChange={(e) =>
-                  setEstRequests(parseInt(e.target.value, 10) || 0)
+                  setEstRequests(parseIntFromInput(e.target.value))
                 }
                 aria-label="Estimated average read requests per month"
               />
@@ -187,13 +184,12 @@ export function AccessPatternInputs() {
               </label>
               <Input
                 id="est-object-size"
-                type="number"
-                min={0}
-                step={0.1}
+                type="text"
+                inputMode="decimal"
                 placeholder="e.g. 2.5"
                 value={estObjectSizeMB || ""}
                 onChange={(e) =>
-                  setEstObjectSizeMB(parseFloat(e.target.value) || 0)
+                  setEstObjectSizeMB(parseFloatFromInput(e.target.value))
                 }
                 aria-label="Estimated average object size in megabytes"
               />

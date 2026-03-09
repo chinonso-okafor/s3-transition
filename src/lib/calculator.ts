@@ -81,6 +81,10 @@ function getRetrievalRequestCostPer1K(
   if (storageClass === StorageClass.GLACIER_FLEXIBLE) {
     return GLACIER_RETRIEVAL_COSTS[glacierRetrievalTier].per1KRequests;
   }
+  if (storageClass === StorageClass.GLACIER_DEEP_ARCHIVE) {
+    const tier = glacierRetrievalTier === "expedited" ? "standard" : glacierRetrievalTier;
+    return DEEP_ARCHIVE_RETRIEVAL_COSTS[tier].per1KRequests;
+  }
   return 0;
 }
 
