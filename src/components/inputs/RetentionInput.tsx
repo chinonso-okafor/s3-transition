@@ -25,10 +25,11 @@ export function RetentionInput() {
         min={0}
         step={1}
         placeholder="e.g. 12"
-        value={retentionMonths === 0 ? "0" : retentionMonths || ""}
-        onChange={(e) =>
-          setInput("retentionMonths", parseInt(e.target.value, 10) || 0)
-        }
+        value={retentionMonths || ""}
+        onChange={(e) => {
+          const raw = e.target.value;
+          setInput("retentionMonths", raw === "" ? 0 : parseInt(raw, 10) || 0);
+        }}
         aria-label="Expected data retention period in months"
       />
       <p className="text-xs text-muted-foreground">
