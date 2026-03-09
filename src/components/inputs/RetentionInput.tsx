@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { useCalculatorStore } from "@/store/calculatorStore";
 import { Input } from "@/components/ui/input";
 import { InfoPopover } from "@/components/ui/InfoPopover";
@@ -9,6 +10,9 @@ export function RetentionInput() {
     (s) => s.inputs.retentionMonths
   );
   const setInput = useCalculatorStore((s) => s.setInput);
+  const [rawValue, setRawValue] = useState(
+    retentionMonths ? String(retentionMonths) : ""
+  );
 
   return (
     <div className="space-y-2">
@@ -25,10 +29,11 @@ export function RetentionInput() {
         min={0}
         step={1}
         placeholder="e.g. 12"
-        value={retentionMonths || ""}
+        value={rawValue}
         onChange={(e) => {
-          const raw = e.target.value;
-          setInput("retentionMonths", raw === "" ? 0 : parseInt(raw, 10) || 0);
+          const val = e.target.value;
+          setRawValue(val);
+          setInput("retentionMonths", val === "" ? 0 : parseInt(val, 10) || 0);
         }}
         aria-label="Expected data retention period in months"
       />
