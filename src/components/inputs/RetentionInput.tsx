@@ -22,10 +22,10 @@ export function RetentionInput() {
       <Input
         id="retention-months"
         type="number"
-        min={1}
+        min={0}
         step={1}
         placeholder="e.g. 12"
-        value={retentionMonths || ""}
+        value={retentionMonths === 0 ? "0" : retentionMonths || ""}
         onChange={(e) =>
           setInput("retentionMonths", parseInt(e.target.value, 10) || 0)
         }
