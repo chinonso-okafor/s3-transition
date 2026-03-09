@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import { useCalculatorStore } from "@/store/calculatorStore";
 import { Input } from "@/components/ui/input";
 import { InfoPopover } from "@/components/ui/InfoPopover";
@@ -11,9 +10,6 @@ export function GlacierRestoreRequestsInput() {
     (s) => s.inputs.monthlyRestoreRequests
   );
   const setInput = useCalculatorStore((s) => s.setInput);
-  const [rawValue, setRawValue] = useState(
-    monthlyRestoreRequests ? String(monthlyRestoreRequests) : ""
-  );
 
   return (
     <div className="space-y-2">
@@ -29,15 +25,13 @@ export function GlacierRestoreRequestsInput() {
         type="text"
         inputMode="numeric"
         placeholder="e.g. 500"
-        value={rawValue}
-        onChange={(e) => {
-          const val = e.target.value;
-          setRawValue(val);
+        value={monthlyRestoreRequests || ""}
+        onChange={(e) =>
           setInput(
             "monthlyRestoreRequests",
-            val === "" ? 0 : parseIntFromInput(val)
-          );
-        }}
+            parseIntFromInput(e.target.value)
+          )
+        }
         aria-label="Monthly Glacier restore requests"
       />
       <p className="text-xs text-muted-foreground">
