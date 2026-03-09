@@ -261,7 +261,9 @@ export function calcMonthlyTCO(
     storageClass === StorageClass.GLACIER_DEEP_ARCHIVE;
 
   const restoreRequestCount =
-    isGlacierAsync && inputs.monthlyRestoreRequests > 0
+    isGlacierAsync &&
+    Number.isFinite(inputs.monthlyRestoreRequests) &&
+    inputs.monthlyRestoreRequests > 0
       ? inputs.monthlyRestoreRequests
       : inputs.monthlyGetRequests;
 
